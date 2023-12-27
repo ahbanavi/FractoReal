@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
+import "hardhat/console.sol";
+
 /// Phase one or two has not started yet.
 error PhaseSaleNotStarted();
 /// Phase one or two has ended.
@@ -56,7 +58,6 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
 
         // hash is based of msg.sender, contract address, tokenId and priceToPay
         // recover signer from signature
-
         if (
             keccak256(
                 abi.encodePacked(msg.sender, address(this), tokenId, priceToPay)
