@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.20;
 
-import "erc721a/contracts/ERC721A.sol";
-import "erc721a/contracts/extensions/ERC721ABurnable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-// import "hardhat/console.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /// Phase one or two has not started yet.
 error PhaseSaleNotStarted();
 /// Phase one or two has ended.
 error PhaseSaleEnded();
-/// Invalid signature, you should use our website for minting.
-error InvalidSignature();
+/// Invalid signer, you should use our website for minting.
+error InvalidSigner();
 /// Invalid ETH has been sended.
 error InvalidETH();
 /// Withdraw failed.
@@ -20,31 +20,27 @@ error WithdrawFailed();
 /// Contracts are not allowed to mint.
 error ContractMintNotAllowed();
 
-contract FractoRealNFT is ERC721A, Ownable {
+/// @custom:security-contact ahbanavi@gmail.com
+contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
 
     string private _baseTokenURI;
-
-    uint256 public immutable totalTokens;
 
     uint256 public phaseOneStartTime = type(uint256).max;
     uint256 public phaseTwoStartTime = type(uint256).max;
 
     constructor(
-        address initialOwner,
-        uint256 totalTokens_
-    ) ERC721A("FractoRealNFT", "FRN") Ownable(initialOwner) {
-        totalTokens = totalTokens_;
-    }
+        address initialOwner
+    ) ERC721("FractoRealNFT", "FNT") Ownable(initialOwner) {}
 
     modifier noContract() {
         if (tx.origin != msg.sender) revert ContractMintNotAllowed();
         _;
     }
 
-    function mint(uint256 quantity) external payable onlyOwner {
-        // `_mint`'s second argument now takes in a `quantity`, not a `tokenId`.
-        _mint(msg.sender, quantity);
+    function safeMint(address to, uint256 tokenId) public onlyOwner {
+        _safeMint(to, tokenId);
     }
 
     function phaseOneMint(
@@ -54,22 +50,26 @@ contract FractoRealNFT is ERC721A, Ownable {
     ) external payable noContract {
         if (block.timestamp < phaseOneStartTime) revert PhaseSaleNotStarted();
         if (block.timestamp >= phaseTwoStartTime) revert PhaseSaleEnded();
+        if (msg.value != priceToPay) revert InvalidETH();
 
-        // TODO: working here
-        // verify signature
-        if (
-            keccak256(abi.encodePacked(msg.sender, address(this)))
-                .toEthSignedMessageHash()
-                .recover(signature) != owner()
-        ) revert InvalidSignature();
+        // hash is based of msg.sender, contract address, tokenId and priceToPay
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                msg.sender,
+                address(this),
+                tokenId,
+                priceToPay
+            )
+        );
 
-        require(tokenId >= 1 && tokenId <= 1000, "Token ID invalid");
-        require(msg.value == price, "Price invalid");
-        require(!_exists(tokenId), "Token ID already minted");
-
+        // recover signer from signature
+        address signer = hash.toEthSignedMessageHash().recover(signature);
+        if (signer != owner()) revert InvalidSigner();
+        
         _mint(msg.sender, tokenId);
     }
 
+    // Contract time setting
     function setPhaseOneStartTime(uint256 startTime_) external onlyOwner {
         phaseOneStartTime = startTime_;
     }
@@ -93,7 +93,26 @@ contract FractoRealNFT is ERC721A, Ownable {
         return _baseTokenURI;
     }
 
-    function _startTokenId() internal pure override returns (uint256) {
-        return 1;
+    // The following functions are overrides required by Solidity.
+
+    function _update(
+        address to,
+        uint256 tokenId,
+        address auth
+    ) internal override(ERC721, ERC721Enumerable) returns (address) {
+        return super._update(to, tokenId, auth);
+    }
+
+    function _increaseBalance(
+        address account,
+        uint128 value
+    ) internal override(ERC721, ERC721Enumerable) {
+        super._increaseBalance(account, value);
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, ERC721Enumerable) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }
