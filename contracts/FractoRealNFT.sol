@@ -54,18 +54,13 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
 
         // hash is based of msg.sender, contract address, tokenId and priceToPay
         bytes32 hash = keccak256(
-            abi.encodePacked(
-                msg.sender,
-                address(this),
-                tokenId,
-                priceToPay
-            )
+            abi.encodePacked(msg.sender, address(this), tokenId, priceToPay)
         );
 
         // recover signer from signature
         address signer = hash.toEthSignedMessageHash().recover(signature);
         if (signer != owner()) revert InvalidSigner();
-        
+
         _mint(msg.sender, tokenId);
     }
 
