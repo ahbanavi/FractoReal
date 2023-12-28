@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@ethereum-waffle/mock-contract": "^4.0.4",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "hardhat": "^2.19.2"
   },
