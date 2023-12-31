@@ -533,6 +533,30 @@ describe("FractoRealNFT", function () {
           expect(balanceAfter - balanceBefore).to.be.greaterThan(0);
         });
       });
+
+      describe("setBaseURI", () => {
+        it("should revert if not owner", async () => {
+          const { fnt, minter } = await loadFixture(deployFNT);
+
+          await expect(
+            fnt.connect(minter).setBaseURI("test")
+          ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+        });
+
+        it("should set baseURI", async () => {
+          const { fnt, owner } = await loadFixture(deployFNT);
+          const tokenId = 1n;
+          const baseURI = "test/";
+
+          // mint
+          await fnt.connect(owner).safeMint(owner.address, tokenId);
+
+          expect(await fnt.tokenURI(tokenId)).to.be.equal("");
+
+          await fnt.setBaseURI(baseURI);
+          expect(await fnt.tokenURI(tokenId)).to.be.equal(baseURI + tokenId);
+        });
+      });
     });
   });
 });
