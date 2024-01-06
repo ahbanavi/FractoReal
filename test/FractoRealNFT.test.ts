@@ -418,144 +418,171 @@ describe("FractoRealNFT", function () {
         });
       });
     });
-
-    describe("onlyOwner", () => {
-      describe("setTimes", () => {
-        describe("phaseOneStartTime", () => {
-          it("should revert if not owner", async () => {
-            const { fnt, minter } = await loadFixture(deployFNT);
-
-            await expect(
-              fnt.connect(minter).setPhaseOneStartTime(1)
-            ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
-          });
-
-          it("should set phaseOneStartTime", async () => {
-            const { fnt, owner } = await loadFixture(deployFNT);
-            // equal to max uint256
-            expect(await fnt.phaseOneStartTime()).to.be.equal(2n ** 256n - 1n);
-
-            const now = await time.latest();
-            await fnt.connect(owner).setPhaseOneStartTime(now);
-            expect(await fnt.phaseOneStartTime()).to.be.equal(now);
-
-            // set to another time
-            const anotherTime = await time.increase(1000000);
-            await fnt.connect(owner).setPhaseOneStartTime(anotherTime);
-            expect(await fnt.phaseOneStartTime()).to.be.equal(anotherTime);
-          });
-        });
-
-        describe("phaseTwoStartTime", () => {
-          it("should revert if not owner", async () => {
-            const { fnt, minter } = await loadFixture(deployFNT);
-
-            await expect(
-              fnt.connect(minter).setPhaseTwoStartTime(1)
-            ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
-          });
-
-          it("should set phaseTwoStartTime", async () => {
-            const { fnt, owner } = await loadFixture(deployFNT);
-            // equal to max uint256
-            expect(await fnt.phaseTwoStartTime()).to.be.equal(2n ** 256n - 1n);
-
-            const now = await time.latest();
-            await fnt.connect(owner).setPhaseTwoStartTime(now);
-            expect(await fnt.phaseTwoStartTime()).to.be.equal(now);
-
-            // set to another time
-            const anotherTime = await time.increase(1000000);
-            await fnt.connect(owner).setPhaseTwoStartTime(anotherTime);
-            expect(await fnt.phaseTwoStartTime()).to.be.equal(anotherTime);
-          });
-        });
-      });
-
-      describe("safeMint", () => {
+  });
+  describe("onlyOwner", () => {
+    describe("setTimes", () => {
+      describe("phaseOneStartTime", () => {
         it("should revert if not owner", async () => {
           const { fnt, minter } = await loadFixture(deployFNT);
 
           await expect(
-            fnt.connect(minter).safeMint(minter.address, 1n)
+            fnt.connect(minter).setPhaseOneStartTime(1)
           ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
         });
 
-        it("should mint 1 token", async () => {
-          const { fnt, owner, minter } = await loadFixture(deployFNT);
-
-          await fnt.connect(owner).safeMint(minter.address, 1n);
-
-          expect(await fnt.totalSupply()).to.be.equal(1);
-          expect(await fnt.ownerOf(1n)).to.be.equal(minter.address);
-          expect(await fnt.balanceOf(minter.address)).to.be.equal(1);
-        });
-      });
-
-      describe("withdraw", () => {
-        it("should revert if not owner", async () => {
-          const { fnt, minter } = await loadFixture(deployFNT);
-
-          await expect(
-            fnt.connect(minter).withdraw()
-          ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
-        });
-
-        it("should withdraw", async () => {
-          const { fnt, owner, minter } = await loadFixture(deployFNT);
-          fnt.setPhaseOneStartTime(await time.latest());
-
-          const tokenId = 1n;
-          const price = ethers.parseEther("0.5");
-
-          // get signiture
-          const signature = await getSaleSignature(
-            owner,
-            minter,
-            fnt,
-            tokenId,
-            price
-          );
-
-          await fnt.connect(minter).phaseOneMint(signature, tokenId, price, {
-            value: price,
-          });
-
-          const balanceBefore = await ethers.provider.getBalance(owner.address);
-          await fnt.withdraw();
-          const balanceAfter = await ethers.provider.getBalance(owner.address);
-
-          // contact balance should be 0
-          expect(
-            await ethers.provider.getBalance(await fnt.getAddress())
-          ).to.be.equal(0);
-
-          expect(balanceAfter - balanceBefore).to.be.greaterThan(0);
-        });
-      });
-
-      describe("setBaseURI", () => {
-        it("should revert if not owner", async () => {
-          const { fnt, minter } = await loadFixture(deployFNT);
-
-          await expect(
-            fnt.connect(minter).setBaseURI("test")
-          ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
-        });
-
-        it("should set baseURI", async () => {
+        it("should set phaseOneStartTime", async () => {
           const { fnt, owner } = await loadFixture(deployFNT);
-          const tokenId = 1n;
-          const baseURI = "test/";
+          // equal to max uint256
+          expect(await fnt.phaseOneStartTime()).to.be.equal(2n ** 256n - 1n);
 
-          // mint
-          await fnt.connect(owner).safeMint(owner.address, tokenId);
+          const now = await time.latest();
+          await fnt.connect(owner).setPhaseOneStartTime(now);
+          expect(await fnt.phaseOneStartTime()).to.be.equal(now);
 
-          expect(await fnt.tokenURI(tokenId)).to.be.equal("");
-
-          await fnt.setBaseURI(baseURI);
-          expect(await fnt.tokenURI(tokenId)).to.be.equal(baseURI + tokenId);
+          // set to another time
+          const anotherTime = await time.increase(1000000);
+          await fnt.connect(owner).setPhaseOneStartTime(anotherTime);
+          expect(await fnt.phaseOneStartTime()).to.be.equal(anotherTime);
         });
+      });
+
+      describe("phaseTwoStartTime", () => {
+        it("should revert if not owner", async () => {
+          const { fnt, minter } = await loadFixture(deployFNT);
+
+          await expect(
+            fnt.connect(minter).setPhaseTwoStartTime(1)
+          ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+        });
+
+        it("should set phaseTwoStartTime", async () => {
+          const { fnt, owner } = await loadFixture(deployFNT);
+          // equal to max uint256
+          expect(await fnt.phaseTwoStartTime()).to.be.equal(2n ** 256n - 1n);
+
+          const now = await time.latest();
+          await fnt.connect(owner).setPhaseTwoStartTime(now);
+          expect(await fnt.phaseTwoStartTime()).to.be.equal(now);
+
+          // set to another time
+          const anotherTime = await time.increase(1000000);
+          await fnt.connect(owner).setPhaseTwoStartTime(anotherTime);
+          expect(await fnt.phaseTwoStartTime()).to.be.equal(anotherTime);
+        });
+      });
+    });
+
+    describe("mint", () => {
+      it("should revert if not owner", async () => {
+        const { fnt, minter } = await loadFixture(deployFNT);
+
+        await expect(
+          fnt.connect(minter).mint(minter.address, 1n)
+        ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+      });
+
+      it("should mint 1 token", async () => {
+        const { fnt, owner, minter } = await loadFixture(deployFNT);
+
+        await fnt.connect(owner).mint(minter.address, 1n);
+
+        expect(await fnt.totalSupply()).to.be.equal(1);
+        expect(await fnt.ownerOf(1n)).to.be.equal(minter.address);
+        expect(await fnt.balanceOf(minter.address)).to.be.equal(1);
+      });
+    });
+
+    describe("withdraw", () => {
+      it("should revert if not owner", async () => {
+        const { fnt, minter } = await loadFixture(deployFNT);
+
+        await expect(
+          fnt.connect(minter).withdraw()
+        ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+      });
+
+      it("should withdraw", async () => {
+        const { fnt, owner, minter } = await loadFixture(deployFNT);
+        fnt.setPhaseOneStartTime(await time.latest());
+
+        const tokenId = 1n;
+        const price = ethers.parseEther("0.5");
+
+        // get signiture
+        const signature = await getSaleSignature(
+          owner,
+          minter,
+          fnt,
+          tokenId,
+          price
+        );
+
+        await fnt.connect(minter).phaseOneMint(signature, tokenId, price, {
+          value: price,
+        });
+
+        const balanceBefore = await ethers.provider.getBalance(owner.address);
+        await fnt.withdraw();
+        const balanceAfter = await ethers.provider.getBalance(owner.address);
+
+        // contact balance should be 0
+        expect(
+          await ethers.provider.getBalance(await fnt.getAddress())
+        ).to.be.equal(0);
+
+        expect(balanceAfter - balanceBefore).to.be.greaterThan(0);
+      });
+    });
+
+    describe("setBaseURI", () => {
+      it("should revert if not owner", async () => {
+        const { fnt, minter } = await loadFixture(deployFNT);
+
+        await expect(
+          fnt.connect(minter).setBaseURI("test")
+        ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+      });
+
+      it("should set baseURI", async () => {
+        const { fnt, owner } = await loadFixture(deployFNT);
+        const tokenId = 1n;
+        const baseURI = "test/";
+
+        // mint
+        await fnt.connect(owner).mint(owner.address, tokenId);
+
+        expect(await fnt.tokenURI(tokenId)).to.be.equal("");
+
+        await fnt.setBaseURI(baseURI);
+        expect(await fnt.tokenURI(tokenId)).to.be.equal(baseURI + tokenId);
+      });
+    });
+
+    describe("setMeterages", () => {
+      it("should revert if not owner", async () => {
+        const { fnt, minter } = await loadFixture(deployFNT);
+
+        await expect(
+          fnt.connect(minter).setMeterages([1n, 2n], [1, 2])
+        ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+      });
+
+      it("should set meterages", async () => {
+        const { fnt, owner } = await loadFixture(deployFNT);
+        const tokenIds = [1n, 2n, 3n, 4n, 5n];
+        const meterages = [1n, 2n, 3n, 4n, 5n];
+
+        // frist expect to be zero
+        for (let i = 0; i < tokenIds.length; i++) {
+          expect(await fnt.meterages(tokenIds[i])).to.be.equal(0);
+        }
+
+        await fnt.connect(owner).setMeterages(tokenIds, meterages);
+
+        // expect to be set
+        for (let i = 0; i < tokenIds.length; i++) {
+          expect(await fnt.meterages(tokenIds[i])).to.be.equal(meterages[i]);
+        }
       });
     });
   });

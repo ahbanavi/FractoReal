@@ -24,7 +24,7 @@ error ContractMintNotAllowed();
 error LenghtMismatch();
 
 /// @custom:security-contact ahbanavi@gmail.com
-contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
+contract FractoRealNFTGasReporterMock is ERC721, ERC721Enumerable, Ownable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
     using Arrays for uint256[];
