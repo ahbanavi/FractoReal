@@ -577,12 +577,43 @@ describe("FractoRealNFT", function () {
           expect(await fnt.meterages(tokenIds[i])).to.be.equal(0);
         }
 
-        await fnt.connect(owner).setMeterages(tokenIds, meterages);
+        await fnt.setMeterages(tokenIds, meterages);
 
         // expect to be set
         for (let i = 0; i < tokenIds.length; i++) {
           expect(await fnt.meterages(tokenIds[i])).to.be.equal(meterages[i]);
         }
+      });
+
+      it("should revert on invalid length", async () => {
+        const { fnt } = await loadFixture(deployFNT);
+        const tokenIds = [1n, 2n, 3n];
+        const metrages = [1n, 2n, 3n, 4n, 5n];
+
+        await expect(
+          fnt.setMeterages(tokenIds, metrages)
+        ).to.be.revertedWithCustomError(fnt, "LenghtMismatch");
+      });
+    });
+
+    describe("batchMint", () => {
+      it("should revert if not owner", async () => {
+        const { fnt, minter } = await loadFixture(deployFNT);
+
+        await expect(
+          fnt.connect(minter).batchMint(minter.address,[1n, 2n])
+        ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+      });
+
+      it("should batch mint 5 tokens", async () => {
+        const { fnt, owner } = await deployFNT();
+
+        const ids = [0n, 1n, 2n, 3n, 4n, 5n];
+
+        await fnt.batchMint(owner.address, ids);
+
+        expect(await fnt.totalSupply()).to.be.equal(ids.length);
+        expect(await fnt.balanceOf(owner.address)).to.be.equal(ids.length);
       });
     });
   });
