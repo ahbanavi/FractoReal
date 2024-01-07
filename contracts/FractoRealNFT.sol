@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/Arrays.sol";
 
+import "./FractoRealFractions.sol";
+
 /// Phase one or two has not started yet.
 error PhaseSaleNotStarted();
 /// Phase one or two has ended.
@@ -29,7 +31,10 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     using MessageHashUtils for bytes32;
     using Arrays for uint256[];
 
+    FractoRealFractions public erc1155;
+
     string private _baseTokenURI;
+    uint256 public constant MAX_SUPPLY = 50;
 
     uint256 public phaseOneStartTime = type(uint256).max;
     uint256 public phaseTwoStartTime = type(uint256).max;
@@ -97,6 +102,29 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
         ) revert InvalidSigner();
 
         _mint(msg.sender, tokenId);
+    }
+
+    function startPhaseTwoMint(address erc1155Address) public {
+        erc1155 = FractoRealFractions(erc1155Address);
+
+        uint256[] memory unmintedTokens = new uint256[](
+            MAX_SUPPLY - totalSupply()
+        );
+        uint256[] memory unmintedTokensMeteres = new uint256[](
+            MAX_SUPPLY - totalSupply()
+        );
+        uint256 unmintedTokensLength = 0;
+
+        for (uint256 i; i != MAX_SUPPLY; ++i) {
+            if (_ownerOf(i) == address(0)) {
+                _safeMint(erc1155Address, i);
+                unmintedTokens[unmintedTokensLength] = i;
+                unmintedTokensMeteres[unmintedTokensLength] = meterages[i];
+                ++unmintedTokensLength;
+            }
+        }
+
+        erc1155.mintBatch(owner(), unmintedTokens, unmintedTokensMeteres, "");
     }
 
     // Contract time setting
