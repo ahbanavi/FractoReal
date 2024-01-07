@@ -117,7 +117,7 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
 
         for (uint256 i; i != MAX_SUPPLY; ++i) {
             if (_ownerOf(i) == address(0)) {
-                _safeMint(erc1155Address, i);
+                _mint(erc1155Address, i); // TODO: use safeMint 
                 unmintedTokens[unmintedTokensLength] = i;
                 unmintedTokensMeteres[unmintedTokensLength] = meterages[i];
                 ++unmintedTokensLength;

@@ -29,7 +29,7 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) public onlyOwner {
+    ) public  { // TODO: instead of onlyOwner, use erc721 contract address
         _mintBatch(to, ids, amounts, data);
     }
 
