@@ -132,7 +132,7 @@ dist
 # Hardhat files
 /cache
 /artifacts
-
+/contracts/artifacts
 # TypeChain files
 /typechain
 /typechain-types
