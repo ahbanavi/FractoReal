@@ -37,13 +37,13 @@ async function getSaleSignature(
   fractoreal: FractoRealNFT,
   tokenId: BigNumberish,
   price: BigNumberish,
-  contractAddress: undefined | string = undefined
+  contractAddress: undefined | string = undefined,
 ): Promise<string> {
   contractAddress = contractAddress || (await fractoreal.getAddress());
 
   const hash = ethers.solidityPackedKeccak256(
     ["address", "address", "uint256", "uint256"],
-    [minter.address, contractAddress, tokenId, price]
+    [minter.address, contractAddress, tokenId, price],
   );
 
   return signer.signMessage(ethers.getBytes(hash));

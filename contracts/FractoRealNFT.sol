@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/utils/Arrays.sol";
 
 import "./FractoRealFractions.sol";
 
+import "hardhat/console.sol";
+
 /// Phase one or two has not started yet.
 error PhaseSaleNotStarted();
 /// Phase one or two has ended.
@@ -105,22 +107,29 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     }
 
     function startPhaseTwoMint(address erc1155Address) public {
+        if (block.timestamp < phaseTwoStartTime) revert PhaseSaleNotStarted();
+
         erc1155 = FractoRealFractions(erc1155Address);
 
-        uint256[] memory unmintedTokens = new uint256[](
-            MAX_SUPPLY - totalSupply()
-        );
-        uint256[] memory unmintedTokensMeteres = new uint256[](
-            MAX_SUPPLY - totalSupply()
-        );
-        uint256 unmintedTokensLength = 0;
+        uint256 arraySize = MAX_SUPPLY - totalSupply();
 
-        for (uint256 i; i != MAX_SUPPLY; ++i) {
-            if (_ownerOf(i) == address(0)) {
-                _mint(erc1155Address, i); // TODO: use safeMint 
-                unmintedTokens[unmintedTokensLength] = i;
-                unmintedTokensMeteres[unmintedTokensLength] = meterages[i];
-                ++unmintedTokensLength;
+        uint256[] memory unmintedTokens = new uint256[](arraySize);
+        uint256[] memory unmintedTokensMeteres = new uint256[](arraySize);
+
+        uint256 counter = 0;
+        for (uint256 tokenId_; tokenId_ != MAX_SUPPLY; ) {
+            if (_ownerOf(tokenId_) == address(0)) {
+                _safeMint(erc1155Address, tokenId_); // TODO: use safeMint
+                unmintedTokens[counter] = tokenId_;
+                unmintedTokensMeteres[counter] = meterages[tokenId_];
+
+                unchecked {
+                    ++counter;
+                }
+            }
+
+            unchecked {
+                ++tokenId_;
             }
         }
 

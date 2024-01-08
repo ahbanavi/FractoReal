@@ -13,7 +13,7 @@ describe("FractoRealNFT", function () {
     const [owner, otherAccount, minter, ...addrs] = await ethers.getSigners();
 
     const REPORTER = await ethers.getContractFactory(
-      "FractoRealNFTGasReporterMock"
+      "FractoRealNFTGasReporterMock",
     );
     const reporter = await REPORTER.deploy(owner.address);
     return { reporter, owner, otherAccount, minter, addrs };
@@ -49,7 +49,7 @@ describe("FractoRealNFT", function () {
       }
 
       expect(await reporter.balanceOf(owner.address)).to.eql(
-        BigInt(ids.length)
+        BigInt(ids.length),
       );
     });
   });
@@ -66,7 +66,7 @@ describe("FractoRealNFT", function () {
       await reporter.batchMint(owner.address, ids);
 
       expect(await reporter.balanceOf(owner.address)).to.eql(
-        BigInt(ids.length)
+        BigInt(ids.length),
       );
     });
   });
