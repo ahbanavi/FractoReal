@@ -12,6 +12,10 @@ import "./FractoRealNFT.sol";
 error OnlyERC721Allowed();
 /// Only owner or erc721 contract is allowed to mint.
 error OnlyOwnerOrERC721Allowed();
+/// Owner does not own all tokens of this id
+error OwnerDoesNotOwnAllTokens();
+//// Token id is not set.
+error TokenIdNotSet();
 
 /// @custom:security-contact ahbanavi@gmail.com
 contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
@@ -29,12 +33,6 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
         _;
     }
 
-    modifier onlyOwnerOrERC721() {
-        if (msg.sender != address(erc721) && msg.sender != owner())
-            revert OnlyOwnerOrERC721Allowed();
-        _;
-    }
-
     function setURI(string memory newuri) public onlyOwner {
         _setURI(newuri);
     }
@@ -44,7 +42,7 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
         uint256 id,
         uint256 amount,
         bytes memory data
-    ) public onlyOwnerOrERC721 {
+    ) public onlyERC721 {
         _mint(account, id, amount, data);
     }
 
@@ -53,9 +51,25 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) public onlyOwnerOrERC721 {
+    ) public onlyERC721 {
         _mintBatch(to, ids, amounts, data);
     }
+
+    function burnAllAndTransferERC721(
+        uint256 tokenId
+    ) public {
+        uint256 tokenIdTotalSupply = totalSupply(tokenId);
+
+        if (tokenIdTotalSupply == 0) revert TokenIdNotSet();
+        if (balanceOf(msg.sender, tokenId) != tokenIdTotalSupply) revert OwnerDoesNotOwnAllTokens();
+
+        // Burn all tokens of this id for the owner
+        _burn(msg.sender, tokenId, tokenIdTotalSupply);
+
+        // Transfer the ownership of the ERC721 token to the owner
+        erc721.safeTransferFrom(address(this), msg.sender, tokenId);
+    }
+
 
     // The following functions are overrides required by Solidity.
 
