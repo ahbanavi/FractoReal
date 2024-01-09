@@ -5,11 +5,13 @@ import { getSaleSignature } from "../scripts/helpers";
 import { int } from "hardhat/internal/core/params/argumentTypes";
 
 describe("FractoRealNFT", function () {
+    const MAX_SUPPLY = 50n;
+
     async function deployFNT() {
         const [owner, otherAccount, minter, ...addrs] = await ethers.getSigners();
 
         const FNT = await ethers.getContractFactory("FractoRealNFT");
-        const fnt = await FNT.deploy(owner.address);
+        const fnt = await FNT.deploy(owner.address, MAX_SUPPLY);
         return { fnt, owner, otherAccount, minter, addrs };
     }
 
@@ -321,12 +323,9 @@ describe("FractoRealNFT", function () {
 
     describe("phaseTwoMint", () => {
         it("should revert if sale is not started", async () => {
-            const { fnt, owner } = await loadFixture(deployFNT);
+            const { fnt } = await loadFixture(deployFNT);
 
-            await expect(fnt.startPhaseTwoMint(owner.address)).to.be.revertedWithCustomError(
-                fnt,
-                "PhaseSaleNotStarted"
-            );
+            await expect(fnt.startPhaseTwoMint()).to.be.revertedWithCustomError(fnt, "PhaseSaleNotStarted");
         });
 
         it("should mint", async () => {
@@ -352,8 +351,9 @@ describe("FractoRealNFT", function () {
             });
 
             await fnt.setPhaseTwoStartTime(await time.latest());
+            await fnt.setErc1155Address(await fractions.getAddress());
 
-            await fnt.startPhaseTwoMint(await fractions.getAddress());
+            await fnt.startPhaseTwoMint();
 
             expect(await fractions["totalSupply()"]()).to.be.eq(totalMeterages);
         });

@@ -26,6 +26,8 @@ error WithdrawFailed();
 error ContractMintNotAllowed();
 /// Lenght of ids and metrages are not equal.
 error LenghtMismatch();
+/// ERC1155 address is not set.
+error ERC1155AddressNotSet();
 
 /// @custom:security-contact ahbanavi@gmail.com
 contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
@@ -36,7 +38,7 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     FractoRealFractions public erc1155;
 
     string private _baseTokenURI;
-    uint256 public constant MAX_SUPPLY = 50;
+    uint256 public immutable MAX_SUPPLY;
 
     uint256 public phaseOneStartTime = type(uint256).max;
     uint256 public phaseTwoStartTime = type(uint256).max;
@@ -60,8 +62,11 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     }
 
     constructor(
-        address initialOwner
-    ) ERC721("FractoRealNFT", "FNT") Ownable(initialOwner) {}
+        address initialOwner,
+        uint256 maxSupply_
+    ) ERC721("FractoRealNFT", "FNT") Ownable(initialOwner) {
+        MAX_SUPPLY = maxSupply_;
+    }
 
     modifier noContract() {
         if (tx.origin != msg.sender) revert ContractMintNotAllowed();
@@ -106,10 +111,15 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
         _mint(msg.sender, tokenId);
     }
 
-    function startPhaseTwoMint(address erc1155Address) public {
-        if (block.timestamp < phaseTwoStartTime) revert PhaseSaleNotStarted();
+    function setErc1155Address(
+        FractoRealFractions erc1155Address
+    ) public onlyOwner {
+        erc1155 = erc1155Address;
+    }
 
-        erc1155 = FractoRealFractions(erc1155Address);
+    function startPhaseTwoMint() public {
+        if (block.timestamp < phaseTwoStartTime) revert PhaseSaleNotStarted();
+        if (address(erc1155) == address(0)) revert ERC1155AddressNotSet();
 
         uint256 arraySize = MAX_SUPPLY - totalSupply();
 
@@ -119,7 +129,7 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
         uint256 counter = 0;
         for (uint256 tokenId_; tokenId_ != MAX_SUPPLY; ) {
             if (_ownerOf(tokenId_) == address(0)) {
-                _safeMint(erc1155Address, tokenId_); // TODO: use safeMint
+                _safeMint(address(erc1155), tokenId_);
                 unmintedTokens[counter] = tokenId_;
                 unmintedTokensMeteres[counter] = meterages[tokenId_];
 
