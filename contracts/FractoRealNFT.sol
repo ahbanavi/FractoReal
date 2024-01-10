@@ -44,6 +44,7 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     uint256 public phaseTwoStartTime = type(uint256).max;
 
     mapping(uint256 id => uint256 max) public meterages;
+    mapping(uint256 id => uint256 max) public residents;
 
     function setMeterages(
         uint256[] memory ids,
@@ -153,6 +154,10 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
 
         // if previose owner of tokenId wasn't `from`, tx reverted in the last function
         erc1155.mint(from, tokenId_, meterages[tokenId_], "");
+    }
+
+    function setResident(uint256 tokenId_, address resident) public {
+        // TODO: start here
     }
 
     // Contract time setting
