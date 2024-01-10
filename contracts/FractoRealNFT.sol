@@ -146,6 +146,15 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
         erc1155.mintBatch(owner(), unmintedTokens, unmintedTokensMeteres, "");
     }
 
+    function fractionize(address from, uint256 tokenId_) public {
+        // first transfer to erc1155
+        // if tx sender os not the owner or approved by the owner then tx revert here
+        safeTransferFrom(from, address(erc1155), tokenId_);
+
+        // if previose owner of tokenId wasn't `from`, tx reverted in the last function
+        erc1155.mint(from, tokenId_, meterages[tokenId_], "");
+    }
+
     // Contract time setting
     function setPhaseOneStartTime(uint256 startTime_) external onlyOwner {
         phaseOneStartTime = startTime_;
