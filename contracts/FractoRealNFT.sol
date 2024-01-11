@@ -43,8 +43,8 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     uint256 public phaseOneStartTime = type(uint256).max;
     uint256 public phaseTwoStartTime = type(uint256).max;
 
-    mapping(uint256 id => uint256 max) public meterages;
-    mapping(uint256 id => uint256 max) public residents;
+    mapping(uint256 tokenId => uint256) public meterages;
+    mapping(uint256 tokenId => address) public residents;
 
     function setMeterages(
         uint256[] memory ids,
@@ -157,7 +157,9 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     }
 
     function setResident(uint256 tokenId_, address resident) public {
-        // TODO: start here
+        _checkAuthorized(_ownerOf(tokenId_), msg.sender, tokenId_);
+
+        residents[tokenId_] = resident;
     }
 
     // Contract time setting
