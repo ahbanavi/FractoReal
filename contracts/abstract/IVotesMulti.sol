@@ -5,9 +5,12 @@ pragma solidity ^0.8.0;
 /**
  * @dev Common interface for {ERC1155Votes} and other {VotesMulti}-enabled contracts.
  *
- * _Available since v4.5._
+ * based on https://github.com/OpenZeppelin/openzeppelin-contracts/pull/3873
  */
 interface IVotesMulti {
+    /**
+     * @dev The signature used has expired.
+     */
     error VotesExpiredSignature(uint256 expiry);
 
     /**

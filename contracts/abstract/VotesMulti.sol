@@ -31,7 +31,7 @@ import "./IVotesMulti.sol";
  * {ERC721-balanceOf}), and can use {_transferVotingUnits} to track a change in the distribution of those units (in the
  * previous example, it would be included in {ERC721-_update}).
  */
-abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
+abstract contract VotesMulti is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
     using Checkpoints for Checkpoints.Trace208;
 
     bytes32 private constant DELEGATION_TYPEHASH =
@@ -211,7 +211,7 @@ abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
         _delegatee[account][id] = delegatee;
 
         emit DelegateChanged(account, id, oldDelegate, delegatee);
-        _moveDelegateVotes(oldDelegate, delegatee, _getVotingUnits(account));
+        _moveDelegateVotes(oldDelegate, delegatee, id, _getVotingUnits(account, id));
     }
 
     /**
@@ -225,15 +225,32 @@ abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
         uint256[] memory amounts
     ) internal virtual {
         if (from == address(0)) {
-            for (uint256 i = 0; i < ids.length; i++) {
-                _totalCheckpoints[ids[i]].push(_add, amounts[i]); // TODO: was here
-                _push(_totalCheckpoints, _add, SafeCast.toUint208(amount));
+            for (uint256 i = 0; i < ids.length; ++i) {
+                _push(
+                    _totalCheckpoints[ids[i]],
+                    _add,
+                    SafeCast.toUint208(amounts[i])
+                );
             }
         }
         if (to == address(0)) {
-            _push(_totalCheckpoints, _subtract, SafeCast.toUint208(amount));
+            for (uint256 i = 0; i < ids.length; ++i) {
+                _push(
+                    _totalCheckpoints[ids[i]],
+                    _subtract,
+                    SafeCast.toUint208(amounts[i])
+                );
+            }
         }
-        _moveDelegateVotes(delegates(from), delegates(to), amount);
+
+        for (uint256 i = 0; i < ids.length; ++i) {
+            _moveDelegateVotes(
+                delegates(from, ids[i]),
+                delegates(to, ids[i]),
+                ids[i],
+                amounts[i]
+            );
+        }
     }
 
     /**
@@ -242,24 +259,25 @@ abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
     function _moveDelegateVotes(
         address from,
         address to,
+        uint256 id,
         uint256 amount
     ) private {
         if (from != to && amount > 0) {
             if (from != address(0)) {
                 (uint256 oldValue, uint256 newValue) = _push(
-                    _delegateCheckpoints[from],
+                    _delegateCheckpoints[from][id],
                     _subtract,
                     SafeCast.toUint208(amount)
                 );
-                emit DelegateVotesChanged(from, oldValue, newValue);
+                emit DelegateVotesChanged(from, id, oldValue, newValue);
             }
             if (to != address(0)) {
                 (uint256 oldValue, uint256 newValue) = _push(
-                    _delegateCheckpoints[to],
+                    _delegateCheckpoints[to][id],
                     _add,
                     SafeCast.toUint208(amount)
                 );
-                emit DelegateVotesChanged(to, oldValue, newValue);
+                emit DelegateVotesChanged(to, id, oldValue, newValue);
             }
         }
     }
@@ -268,9 +286,10 @@ abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
      * @dev Get number of checkpoints for `account`.
      */
     function _numCheckpoints(
-        address account
+        address account,
+        uint256 id
     ) internal view virtual returns (uint32) {
-        return SafeCast.toUint32(_delegateCheckpoints[account].length());
+        return SafeCast.toUint32(_delegateCheckpoints[account][id].length());
     }
 
     /**
@@ -278,9 +297,10 @@ abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
      */
     function _checkpoints(
         address account,
+        uint256 id,
         uint32 pos
     ) internal view virtual returns (Checkpoints.Checkpoint208 memory) {
-        return _delegateCheckpoints[account].at(pos);
+        return _delegateCheckpoints[account][id].at(pos);
     }
 
     function _push(
@@ -302,5 +322,5 @@ abstract contract Votes is IVotesMulti, Context, EIP712, Nonces, IERC6372 {
     /**
      * @dev Must return the voting units held by an account.
      */
-    function _getVotingUnits(address) internal view virtual returns (uint256);
+    function _getVotingUnits(address, uint256) internal view virtual returns (uint256);
 }

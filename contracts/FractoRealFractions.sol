@@ -5,8 +5,10 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 import "./FractoRealNFT.sol";
+import "./abstract/ERC1155Votes.sol";
 
 /// Only erc721 contract is allowed to mint.
 error OnlyERC721Allowed();
@@ -18,13 +20,20 @@ error OwnerDoesNotOwnAllTokens();
 error TokenIdNotSet();
 
 /// @custom:security-contact ahbanavi@gmail.com
-contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
+contract FractoRealFractions is
+    ERC1155,
+    ERC1155Supply,
+    Ownable,
+    ERC721Holder,
+    EIP712,
+    ERC1155Votes
+{
     FractoRealNFT public immutable erc721;
 
     constructor(
         address initialOwner,
         FractoRealNFT erc721_
-    ) ERC1155("") Ownable(initialOwner) {
+    ) ERC1155("") Ownable(initialOwner) EIP712("FractoRealFractions", "1") {
         erc721 = erc721_;
     }
 
@@ -55,13 +64,12 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
         _mintBatch(to, ids, amounts, data);
     }
 
-    function burnAllAndTransferERC721(
-        uint256 tokenId
-    ) public {
+    function burnAllAndTransferERC721(uint256 tokenId) public {
         uint256 tokenIdTotalSupply = totalSupply(tokenId);
 
         if (tokenIdTotalSupply == 0) revert TokenIdNotSet();
-        if (balanceOf(msg.sender, tokenId) != tokenIdTotalSupply) revert OwnerDoesNotOwnAllTokens();
+        if (balanceOf(msg.sender, tokenId) != tokenIdTotalSupply)
+            revert OwnerDoesNotOwnAllTokens();
 
         // Burn all tokens of this id for the owner
         _burn(msg.sender, tokenId, tokenIdTotalSupply);
@@ -70,7 +78,6 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
         erc721.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
-
     // The following functions are overrides required by Solidity.
 
     function _update(
@@ -78,7 +85,11 @@ contract FractoRealFractions is ERC1155, Ownable, ERC1155Supply, ERC721Holder {
         address to,
         uint256[] memory ids,
         uint256[] memory values
-    ) internal override(ERC1155, ERC1155Supply) {
+    ) internal virtual override(ERC1155, ERC1155Supply, ERC1155Votes) {
         super._update(from, to, ids, values);
+    }
+
+    function getChainId() external view returns (uint256) {
+        return block.chainid;
     }
 }
