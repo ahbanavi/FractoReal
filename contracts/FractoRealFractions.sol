@@ -88,8 +88,4 @@ contract FractoRealFractions is
     ) internal virtual override(ERC1155, ERC1155Supply, ERC1155Votes) {
         super._update(from, to, ids, values);
     }
-
-    function getChainId() external view returns (uint256) {
-        return block.chainid;
-    }
 }
