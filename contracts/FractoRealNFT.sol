@@ -7,8 +7,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/Arrays.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./FractoRealFractions.sol";
+import "./RentManagement.sol";
 
 import "hardhat/console.sol";
 
@@ -30,10 +32,11 @@ error LenghtMismatch();
 error ERC1155AddressNotSet();
 
 /// @custom:security-contact ahbanavi@gmail.com
-contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
+contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
     using Arrays for uint256[];
+    using Address for address payable;
 
     FractoRealFractions public erc1155;
 
@@ -44,7 +47,6 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
     uint256 public phaseTwoStartTime = type(uint256).max;
 
     mapping(uint256 tokenId => uint256) public meterages;
-    mapping(uint256 tokenId => address) public residents;
 
     function setMeterages(
         uint256[] memory ids,
@@ -156,12 +158,6 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
         erc1155.mint(from, tokenId_, meterages[tokenId_], "");
     }
 
-    function setResident(uint256 tokenId_, address resident) public {
-        _checkAuthorized(_ownerOf(tokenId_), msg.sender, tokenId_);
-
-        residents[tokenId_] = resident;
-    }
-
     // Contract time setting
     function setPhaseOneStartTime(uint256 startTime_) external onlyOwner {
         phaseOneStartTime = startTime_;
@@ -173,8 +169,7 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable {
 
     /// Withdraw funds
     function withdraw() external onlyOwner {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        if (!success) revert WithdrawFailed();
+        payable(msg.sender).sendValue(address(this).balance);
     }
 
     /// Set base token URI

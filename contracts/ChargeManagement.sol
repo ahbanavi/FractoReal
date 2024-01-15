@@ -2,16 +2,19 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./BuildingManagerElection.sol";
 import "./FractoRealNFT.sol";
 
 contract ChargeManagement is BuildingManagerElection {
+    using Address for address payable;
+
     /// Only the building manager can call this function
     error OnlyBuildingManager();
 
     /// Insufficient fee amount
-    error InsufficientFeeAmount();
+    error InvalidFeeAmount();
 
     /// Already paid fee
     error AlreadyPaidFee();
@@ -20,7 +23,12 @@ contract ChargeManagement is BuildingManagerElection {
     error SpendFailed();
 
     // event for fee payments
-    event FeePaid(uint256 indexed tokenId, uint256 indexed month, address payer, uint256 amount);
+    event FeePaid(
+        uint256 indexed tokenId,
+        uint256 indexed month,
+        address payer,
+        uint256 amount
+    );
 
     // event for fee spending
     event FeeSpent(uint256 indexed month, address to, uint256 amount);
@@ -32,7 +40,7 @@ contract ChargeManagement is BuildingManagerElection {
     uint256 public currentMonth;
 
     mapping(uint256 tokenId => mapping(uint256 month => uint256 amount))
-        public balances;
+        public paidFees;
 
     modifier onlyBuildingManager() {
         if (msg.sender != buildingManager) revert OnlyBuildingManager();
@@ -46,19 +54,21 @@ contract ChargeManagement is BuildingManagerElection {
     function payFee(
         uint256 tokenId
     ) external payable onlyResidentOrUnitOwner(tokenId) {
-        if (msg.value != feeAmount) revert InsufficientFeeAmount();
-        if (balances[tokenId][currentMonth] > 0) revert AlreadyPaidFee();
+        if (msg.value != feeAmount) revert InvalidFeeAmount();
 
-        balances[tokenId][currentMonth] += msg.value;
+        uint256 month = currentMonth;
+        if (paidFees[tokenId][month] > 0) revert AlreadyPaidFee();
 
-        emit FeePaid(tokenId, currentMonth, msg.sender, msg.value);
+        paidFees[tokenId][month] += msg.value;
+
+        emit FeePaid(tokenId, month, msg.sender, msg.value);
     }
 
-    function spendFee(uint256 _amount, address to) external onlyBuildingManager {
-        if (address(this).balance < _amount) revert InsufficientFeeAmount();
-
-        (bool success, ) = to.call{value: _amount}("");
-        if (!success) revert SpendFailed();
+    function spendFee(
+        uint256 _amount,
+        address to
+    ) external onlyBuildingManager {
+        payable(to).sendValue(_amount);
 
         emit FeeSpent(currentMonth, to, _amount);
     }
