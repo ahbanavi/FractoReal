@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 import "./FractoRealNFT.sol";
-import "./abstract/ERC1155Votes.sol";
+import "./FractionsDAO.sol";
 
 /// Only erc721 contract is allowed to mint.
 error OnlyERC721Allowed();
@@ -26,7 +26,7 @@ contract FractoRealFractions is
     Ownable,
     ERC721Holder,
     EIP712,
-    ERC1155Votes
+    FractionsDAO
 {
     FractoRealNFT public immutable erc721;
 
@@ -85,7 +85,7 @@ contract FractoRealFractions is
         address to,
         uint256[] memory ids,
         uint256[] memory values
-    ) internal virtual override(ERC1155, ERC1155Supply, ERC1155Votes) {
+    ) internal virtual override(ERC1155, ERC1155Supply) {
         super._update(from, to, ids, values);
     }
 }
