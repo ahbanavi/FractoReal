@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
+import "./FractoRealNFT.sol";
+
 abstract contract BuildingManagerElection {
     /// Invalid Status
     error InvalidStatus(ElectionState current, ElectionState expected);
@@ -13,8 +15,8 @@ abstract contract BuildingManagerElection {
     /// Voting is not Ended
     error VotingNotEnded();
 
-    /// Not enough votes to vote
-    error NotEnoughVotes();
+    /// Already voted
+    error AlreadyVoted(address voter);
 
     /// Does not own ERC721
     error DoesNotOwnERC721();
@@ -25,11 +27,23 @@ abstract contract BuildingManagerElection {
     /// Candidate already registered
     error CandidateAlreadyRegistered();
 
+    /// Only resident or unit owner can call this function
+    error OnlyResidentOrUnitOwner();
+
+    event Voted(
+        uint256 indexed tokenId,
+        address indexed voter,
+        address indexed candidate
+    );
+
+    event StateChanged(ElectionState newState);
+
+    event BuildingManagerChanged(address newBuildingManager);
+
     enum ElectionState {
         NotStarted,
         acceptCandidates,
-        Voting,
-        Counting
+        Voting
     }
 
     struct Candidate {
@@ -40,8 +54,7 @@ abstract contract BuildingManagerElection {
 
     ElectionState private _electionState;
 
-    address[] public voters;
-    mapping(address => uint256) public voterVoteCount;
+    mapping(uint256 tokenId => address voter) public voters;
 
     address[] private _candidateList;
     mapping(address => Candidate) public candidates;
@@ -49,6 +62,14 @@ abstract contract BuildingManagerElection {
     // timestamp when voting ends
     uint256 public votingEnd;
 
+    modifier onlyResidentOrUnitOwner(uint256 tokenId) {
+        FractoRealNFT erc721 = getErc721();
+        if (
+            erc721.ownerOf(tokenId) != msg.sender &&
+            erc721.residents(tokenId) != msg.sender
+        ) revert OnlyResidentOrUnitOwner();
+        _;
+    }
 
     function _ownsERC721(address owner) private view returns (bool) {
         return _erc721TokenCount(owner) > 0;
@@ -74,6 +95,8 @@ abstract contract BuildingManagerElection {
             revert InvalidStatus(electionState, ElectionState.NotStarted);
 
         _electionState = ElectionState.acceptCandidates;
+
+        emit StateChanged(ElectionState.acceptCandidates);
     }
 
     function startVoting(uint256 votingEnd_) public {
@@ -83,33 +106,31 @@ abstract contract BuildingManagerElection {
 
         _electionState = ElectionState.Voting;
         votingEnd = votingEnd_;
+
+        emit StateChanged(ElectionState.Voting);
     }
 
-    function castVote(address candidate_) public {
+    function castVote(
+        uint256 tokenId,
+        address candidate_
+    ) public onlyResidentOrUnitOwner(tokenId) {
         ElectionState electionState = _electionState;
         if (electionState != ElectionState.Voting)
             revert InvalidStatus(electionState, ElectionState.Voting);
         if (block.timestamp > votingEnd) revert VotingHasEnded();
 
-        address voter = msg.sender;
-        uint256 voteCounts = voterVoteCount[voter];
+        address voter = voters[tokenId];
 
-        if (voteCounts < _erc721TokenCount(voter)) revert NotEnoughVotes();
+        if (voter != address(0)) revert AlreadyVoted(voter);
 
         Candidate storage candidate = candidates[candidate_];
         if (!candidate.isRegistered) revert CandidateNotRegistered();
 
         ++candidate.voteCount;
-        ++voterVoteCount[voter];
 
-        // if not already voted, add to voters
-        if (voteCounts == 0) {
-            voters.push(voter);
-        }
-    }
+        voters[tokenId] = msg.sender;
 
-    function isVotingFinished() public view returns (bool) {
-        return _electionState == ElectionState.Counting;
+        emit Voted(tokenId, msg.sender, candidate_);
     }
 
     function endVotingAndSelectWinner() public {
@@ -117,8 +138,6 @@ abstract contract BuildingManagerElection {
         if (electionState != ElectionState.Voting)
             revert InvalidStatus(electionState, ElectionState.Voting);
         if (block.timestamp < votingEnd) revert VotingNotEnded();
-
-        _electionState = ElectionState.Counting;
 
         // find the candidate with the most votes
         uint256 maxVotes;
@@ -137,8 +156,9 @@ abstract contract BuildingManagerElection {
                 ++i;
             }
         }
+        address winner = winningCandidate.candidate;
 
-        setBuildingManager(winningCandidate.candidate);
+        setBuildingManager(winner);
 
         // Reset voting state
         _electionState = ElectionState.NotStarted;
@@ -153,16 +173,18 @@ abstract contract BuildingManagerElection {
         delete _candidateList;
 
         // also reset voterVoteCount
-        length = voters.length;
+        length = getErc721().totalSupply();
         for (uint256 i; i != length; ) {
-            delete voterVoteCount[voters[i]];
+            delete voters[i];
             unchecked {
                 ++i;
             }
         }
 
-        delete voters;
         votingEnd = 0;
+
+        emit StateChanged(ElectionState.NotStarted);
+        emit BuildingManagerChanged(winner);
     }
 
     function _erc721TokenCount(address owner) private view returns (uint256) {
@@ -170,5 +192,6 @@ abstract contract BuildingManagerElection {
     }
 
     function setBuildingManager(address newBuildingManager) internal virtual;
-    function getErc721() public virtual view returns (IERC721);
+
+    function getErc721() public view virtual returns (FractoRealNFT);
 }

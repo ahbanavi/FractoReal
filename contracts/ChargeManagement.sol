@@ -16,9 +16,6 @@ contract ChargeManagement is BuildingManagerElection {
     /// Already paid fee
     error AlreadyPaidFee();
 
-    /// Only resident or unit owner can call this function
-    error OnlyResidentOrUnitOwner();
-
     /// Spend fee failed
     error SpendFailed();
 
@@ -39,14 +36,6 @@ contract ChargeManagement is BuildingManagerElection {
 
     modifier onlyBuildingManager() {
         if (msg.sender != buildingManager) revert OnlyBuildingManager();
-        _;
-    }
-
-    modifier onlyResidentOrUnitOwner(uint256 tokenId) {
-        if (
-            erc721.ownerOf(tokenId) != msg.sender ||
-            erc721.residents(tokenId) != msg.sender
-        ) revert OnlyResidentOrUnitOwner();
         _;
     }
 
@@ -110,7 +99,7 @@ contract ChargeManagement is BuildingManagerElection {
         currentMonth = getCurrentMonth();
     }
 
-    function getErc721() public view virtual override returns (IERC721) {
+    function getErc721() public view virtual override returns (FractoRealNFT) {
         return erc721;
     }
 }
