@@ -10,6 +10,10 @@ abstract contract FractionsDAO is ERC1155 {
     mapping(uint256 => Proposal) private proposals;
     mapping(uint256 => mapping(address => bool)) public hasVoted;
 
+    // write a mapping for token id to a number of active proposals
+    // so we can revert transfer if there are active proposals
+    mapping(uint256 tokenId => uint256 lock) public activeProposals;
+
     event ProposalSubmitted(
         uint256 indexed id,
         address indexed proposer,
@@ -72,6 +76,8 @@ abstract contract FractionsDAO is ERC1155 {
 
         ++proposalsId;
 
+        activeProposals[tokenId]++;
+
         emit ProposalSubmitted(proposalId, msg.sender, tokenId, description);
     }
 
@@ -108,9 +114,11 @@ abstract contract FractionsDAO is ERC1155 {
         if (proposal.votesFor >= voteThreshold) {
             proposal.passed = true;
             emit ProposalPassed(proposalId);
+            activeProposals[proposal.tokenId]--;
         } else if (proposal.votesAgainst >= voteThreshold) {
             proposal.rejected = true;
             emit ProposalRejected(proposalId);
+            activeProposals[proposal.tokenId]--;
         }
     }
 
@@ -128,5 +136,10 @@ abstract contract FractionsDAO is ERC1155 {
 
         proposal.executed = true;
         emit ProposalExecuted(proposalId);
+    }
+
+    // function to check if a token is locked
+    function isTokenLocked(uint256 tokenId) public view returns (bool) {
+        return activeProposals[tokenId] != 0;
     }
 }

@@ -156,7 +156,6 @@ contract FractoRealFractions is
         uint256 len = ids.length;
         for (uint256 i; i != len; ) {
             uint256 tokenId = ids[i];
-            uint256 value = values[i];
 
             if (from == address(0)) {
                 // mint
@@ -165,6 +164,16 @@ contract FractoRealFractions is
                 }
                 continue;
             }
+
+            // check if token is locked due to a proposal
+            if (isTokenLocked(tokenId)) {
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
+            uint256 value = values[i];
 
             uint256 fromShareIndex = tokenIdShareHoldersIndex[tokenId][from];
             if (fromShareIndex != 0) {
