@@ -167,10 +167,7 @@ contract FractoRealFractions is
 
             // check if token is locked due to a proposal
             if (isTokenLocked(tokenId)) {
-                unchecked {
-                    ++i;
-                }
-                continue;
+                revert TokenLocked(tokenId);
             }
 
             uint256 value = values[i];

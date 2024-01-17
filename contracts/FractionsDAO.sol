@@ -14,6 +14,9 @@ abstract contract FractionsDAO is ERC1155 {
     // so we can revert transfer if there are active proposals
     mapping(uint256 tokenId => uint256 lock) public activeProposals;
 
+    /// Token is locked due to an active proposal
+    error TokenLocked(uint256 tokenId);
+
     event ProposalSubmitted(
         uint256 indexed id,
         address indexed proposer,
