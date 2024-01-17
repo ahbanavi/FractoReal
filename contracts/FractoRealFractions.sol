@@ -30,6 +30,16 @@ contract FractoRealFractions is
 {
     FractoRealNFT public immutable erc721;
 
+    struct shareHolders {
+        address holder;
+        uint256 share;
+        uint256 rents;
+    }
+
+    mapping(uint256 tokenId => shareHolders[]) public tokenIdShareHolders;
+    mapping(uint256 => mapping(address => uint256))
+        public tokenIdShareHoldersIndex;
+
     constructor(
         address initialOwner,
         FractoRealNFT erc721_
@@ -78,6 +88,34 @@ contract FractoRealFractions is
         erc721.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
+    // write a function to withdraw rents from erc721 contract with withdrawRent function
+    // the rent should be split between token owners based on their share
+    function withdrawAndSplitRent(uint256 tokenId) external {
+        // call withdrawRent function of erc721 contract and get the rent amount
+        uint256 rentAmount = erc721.withdrawRent(tokenId);
+
+        uint256 totalShares = totalSupply(tokenId);
+
+        // for each token owner, calculate the rent amount based on their share
+        for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
+            uint256 share = tokenIdShareHolders[tokenId][i].share;
+            uint256 rent = (share * rentAmount) / totalShares;
+
+            // increase the rents of the token owner
+            tokenIdShareHolders[tokenId][i].rents += rent;
+        }
+    }
+
+
+    function withdrawRent(uint256 tokenId) external {
+        uint256 rentMoney = tokenIdShareHolders[tokenId][tokenIdShareHoldersIndex[tokenId][msg.sender] - 1].rents;
+
+        tokenIdShareHolders[tokenId][tokenIdShareHoldersIndex[tokenId][msg.sender] - 1].rents = 0;
+
+        payable(msg.sender).transfer(rentMoney);
+    }
+
+
     // The following functions are overrides required by Solidity.
 
     function _update(
@@ -87,5 +125,32 @@ contract FractoRealFractions is
         uint256[] memory values
     ) internal virtual override(ERC1155, ERC1155Supply) {
         super._update(from, to, ids, values);
+
+        // update the share holders
+        for (uint256 i; i != ids.length; ) {
+            uint256 tokenId = ids[i];
+            uint256 value = values[i];
+
+            if (tokenIdShareHoldersIndex[tokenId][from] > 0) {
+                uint256 index = tokenIdShareHoldersIndex[tokenId][from] - 1;
+                tokenIdShareHolders[tokenId][index].share -= value;
+            }
+
+            if (tokenIdShareHoldersIndex[tokenId][to] > 0) {
+                uint256 index = tokenIdShareHoldersIndex[tokenId][to] - 1;
+                tokenIdShareHolders[tokenId][index].share += value;
+            } else {
+                tokenIdShareHolders[tokenId].push(
+                    shareHolders({holder: to, share: value, rents: 0})
+                );
+                tokenIdShareHoldersIndex[tokenId][to] = tokenIdShareHolders[
+                    tokenId
+                ].length;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 }

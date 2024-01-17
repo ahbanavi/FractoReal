@@ -45,7 +45,7 @@ abstract contract RentManagement is ERC721 {
         emit RentPaid(tokenId, msg.sender, msg.value);
     }
 
-    function withdrawRent(uint256 tokenId) external onlyAuthorized(tokenId) {
+    function withdrawRent(uint256 tokenId) external onlyAuthorized(tokenId) returns (uint256) {
         uint256 rentAmount = rents[tokenId];
         if (rentAmount == 0) revert InvalidRentAmountToWithdraw();
         rents[tokenId] = 0;
@@ -54,6 +54,8 @@ abstract contract RentManagement is ERC721 {
         payable(msg.sender).sendValue(rentAmount);
 
         emit RentWithdrawn(tokenId, msg.sender, rentAmount);
+
+        return rentAmount;
     }
 
     function setRentFee(
