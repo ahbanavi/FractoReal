@@ -16,31 +16,21 @@ contract ChargeManagement is BuildingManagerElection {
     /// Insufficient fee amount
     error InvalidFeeAmount();
 
-    /// Already paid fee
-    error AlreadyPaidFee();
-
     /// Spend fee failed
     error SpendFailed();
 
     // event for fee payments
-    event FeePaid(
-        uint256 indexed tokenId,
-        uint256 indexed month,
-        address payer,
-        uint256 amount
-    );
+    event FeePaid(uint256 indexed tokenId, address payer, uint256 amount);
 
     // event for fee spending
-    event FeeSpent(uint256 indexed month, address to, uint256 amount);
+    event FeeSpent(address to, uint256 amount);
 
     FractoRealNFT public immutable erc721;
 
     address public buildingManager;
     uint256 public feeAmount;
-    uint256 public currentMonth;
 
-    mapping(uint256 tokenId => mapping(uint256 month => uint256 amount))
-        public paidFees;
+    mapping(uint256 tokenId => uint256 amount) public paidFees;
 
     modifier onlyBuildingManager() {
         if (msg.sender != buildingManager) revert OnlyBuildingManager();
@@ -56,12 +46,9 @@ contract ChargeManagement is BuildingManagerElection {
     ) external payable onlyResidentOrUnitOwner(tokenId) {
         if (msg.value != feeAmount) revert InvalidFeeAmount();
 
-        uint256 month = currentMonth;
-        if (paidFees[tokenId][month] > 0) revert AlreadyPaidFee();
+        paidFees[tokenId] += msg.value;
 
-        paidFees[tokenId][month] += msg.value;
-
-        emit FeePaid(tokenId, month, msg.sender, msg.value);
+        emit FeePaid(tokenId, msg.sender, msg.value);
     }
 
     function spendFee(
@@ -70,7 +57,7 @@ contract ChargeManagement is BuildingManagerElection {
     ) external onlyBuildingManager {
         payable(to).sendValue(_amount);
 
-        emit FeeSpent(currentMonth, to, _amount);
+        emit FeeSpent(to, _amount);
     }
 
     function setFeeAmount(uint256 _feeAmount) external onlyBuildingManager {
@@ -79,34 +66,6 @@ contract ChargeManagement is BuildingManagerElection {
 
     function setBuildingManager(address newBuildingManager) internal override {
         buildingManager = newBuildingManager;
-    }
-
-    function getCurrentMonth() public view returns (uint256 month) {
-        uint256 epochDay = block.timestamp / 86400;
-
-        assembly {
-            epochDay := add(epochDay, 719468)
-            let doe := mod(epochDay, 146097)
-            let yoe := div(
-                sub(
-                    sub(add(doe, div(doe, 36524)), div(doe, 1460)),
-                    eq(doe, 146096)
-                ),
-                365
-            )
-            let doy := sub(
-                doe,
-                sub(add(mul(365, yoe), shr(2, yoe)), div(yoe, 100))
-            )
-            let mp := div(add(mul(5, doy), 2), 153)
-            month := sub(add(mp, 3), mul(gt(mp, 9), 12))
-        }
-
-        return month;
-    }
-
-    function setCurrenthMonth() public {
-        currentMonth = getCurrentMonth();
     }
 
     function getErc721() public view virtual override returns (FractoRealNFT) {
