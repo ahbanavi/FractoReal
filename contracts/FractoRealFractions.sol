@@ -28,7 +28,10 @@ contract FractoRealFractions is
     EIP712,
     FractionsDAO
 {
+    event Received(address from, uint256 amount);
+
     FractoRealNFT public immutable erc721;
+    uint256 public nonSharesRents;
 
     struct shareHolders {
         address holder;
@@ -96,25 +99,48 @@ contract FractoRealFractions is
 
         uint256 totalShares = totalSupply(tokenId);
 
+        uint256 shareHoldersShares = 0;
         // for each token owner, calculate the rent amount based on their share
         for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
             uint256 share = tokenIdShareHolders[tokenId][i].share;
             uint256 rent = (share * rentAmount) / totalShares;
+            shareHoldersShares += share;
 
             // increase the rents of the token owner
             tokenIdShareHolders[tokenId][i].rents += rent;
         }
+
+        // if the total shares of token owners is not equal to total shares of the token, then
+        // the remaining rent should be given to the owner of this contract
+        // that's because we don't set shares for the owner of this contract while minting to save gas
+        if (shareHoldersShares != totalShares) {
+            uint256 notSplitedRents = rentAmount - shareHoldersShares;
+            nonSharesRents += notSplitedRents;
+        }
     }
 
-
     function withdrawRent(uint256 tokenId) external {
-        uint256 rentMoney = tokenIdShareHolders[tokenId][tokenIdShareHoldersIndex[tokenId][msg.sender] - 1].rents;
+        uint256 rentMoney = tokenIdShareHolders[tokenId][
+            tokenIdShareHoldersIndex[tokenId][msg.sender] - 1
+        ].rents;
 
-        tokenIdShareHolders[tokenId][tokenIdShareHoldersIndex[tokenId][msg.sender] - 1].rents = 0;
+        tokenIdShareHolders[tokenId][
+            tokenIdShareHoldersIndex[tokenId][msg.sender] - 1
+        ].rents = 0;
 
         payable(msg.sender).transfer(rentMoney);
     }
 
+    function withdrawNonSharesRents() external onlyOwner {
+        uint256 rentMoney = nonSharesRents;
+        nonSharesRents = 0;
+        payable(msg.sender).transfer(rentMoney);
+    }
+
+    // function to recieve ether
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
 
     // The following functions are overrides required by Solidity.
 
@@ -127,13 +153,31 @@ contract FractoRealFractions is
         super._update(from, to, ids, values);
 
         // update the share holders
-        for (uint256 i; i != ids.length; ) {
+        uint256 len = ids.length;
+        for (uint256 i; i != len; ) {
             uint256 tokenId = ids[i];
             uint256 value = values[i];
 
-            if (tokenIdShareHoldersIndex[tokenId][from] > 0) {
+            if (from == address(0)) {
+                // mint
+                unchecked {
+                    ++i;
+                }
+                continue;
+            }
+
+            uint256 fromShareIndex = tokenIdShareHoldersIndex[tokenId][from];
+            if (fromShareIndex != 0) {
                 uint256 index = tokenIdShareHoldersIndex[tokenId][from] - 1;
                 tokenIdShareHolders[tokenId][index].share -= value;
+            }
+
+            if (to == address(0)) {
+                // burn
+                unchecked {
+                    ++i;
+                }
+                continue;
             }
 
             if (tokenIdShareHoldersIndex[tokenId][to] > 0) {
