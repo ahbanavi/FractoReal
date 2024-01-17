@@ -157,8 +157,8 @@ contract FractoRealFractions is
         for (uint256 i; i != len; ) {
             uint256 tokenId = ids[i];
 
-            if (from == address(0)) {
-                // mint
+            if (from == address(0) && to == owner()) {
+                // skip for owner minting to save gas
                 unchecked {
                     ++i;
                 }

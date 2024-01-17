@@ -2,7 +2,6 @@ import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-help
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { getSaleSignature } from "../scripts/helpers";
-import { int } from "hardhat/internal/core/params/argumentTypes";
 
 describe("FractoRealNFT", function () {
     const MAX_SUPPLY = 50n;
@@ -356,6 +355,82 @@ describe("FractoRealNFT", function () {
             await fnt.startPhaseTwoMint();
 
             expect(await fractions["totalSupply()"]()).to.be.eq(totalMeterages);
+        });
+    });
+
+    describe("fractionize", () => {
+        it("should revert if not minted", async () => {
+            const { fnt, owner } = await loadFixture(deployFNT);
+
+            await expect(fnt.fractionize(owner, 1n))
+                .to.be.revertedWithCustomError(fnt, "ERC721InvalidReceiver")
+                .withArgs(ethers.ZeroAddress);
+        });
+
+        it("should revert if erc155 not set", async () => {
+            const { fnt, owner, minter } = await loadFixture(deployFNT);
+
+            const tokenId = 1n;
+
+            // mint
+            await fnt.connect(owner).mint(owner.address, tokenId);
+
+            await expect(fnt.fractionize(owner.address, tokenId))
+                .to.be.revertedWithCustomError(fnt, "ERC721InvalidReceiver")
+                .withArgs(ethers.ZeroAddress);
+        });
+
+        it("should revert if not approved or owner", async () => {
+            const { fnt, owner, minter } = await loadFixture(deployFNT);
+            const { fractions } = await loadFixture(deployFractions);
+
+            const tokenId = 1n;
+
+            // mint
+            await fnt.connect(owner).mint(owner.address, tokenId);
+
+            // set erc1155 address
+            await fnt.setErc1155Address(await fractions.getAddress());
+
+            await expect(fnt.connect(minter).fractionize(minter.address, tokenId)).to.be.revertedWithCustomError(
+                fnt,
+                "ERC721InsufficientApproval"
+            );
+
+            await expect(fnt.connect(minter).fractionize(owner.address, tokenId)).to.be.revertedWithCustomError(
+                fnt,
+                "ERC721InsufficientApproval"
+            );
+        });
+
+        it("shound fractionize", async () => {
+            const { fnt, owner, minter } = await loadFixture(deployFNT);
+            const { fractions } = await loadFixture(deployFractions);
+
+            const tokenId = 1n;
+
+            // mint
+            await fnt.connect(owner).mint(minter.address, tokenId);
+            expect(await fnt.balanceOf(minter.address)).to.be.equal(1n);
+
+            // set erc1155 address
+            await fnt.setErc1155Address(await fractions.getAddress());
+
+            const meters = 1000n;
+            await fnt.setMeterages([tokenId], [meters]);
+
+            // fractionize
+            await fnt.connect(minter).fractionize(minter.address, tokenId);
+
+            expect(await fractions.balanceOf(minter.address, tokenId)).to.be.equal(meters);
+            expect(await fnt.balanceOf(minter.address)).to.be.equal(0n);
+            expect(await fnt.ownerOf(tokenId)).to.be.equal(await fractions.getAddress());
+
+            // check shareHolders
+            const shareHolders = await fractions.tokenIdShareHolders(tokenId, 0n);
+            expect(shareHolders.holder).to.be.equal(minter.address);
+            expect(shareHolders.share).to.be.equal(meters);
+            expect(shareHolders.rents).to.be.equal(0n);
         });
     });
 
