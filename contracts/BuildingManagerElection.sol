@@ -27,6 +27,9 @@ abstract contract BuildingManagerElection {
     /// Candidate already registered
     error CandidateAlreadyRegistered();
 
+    /// Contract call not allowed
+    error ContractCall();
+
     /// Only resident or unit owner can call this function
     error OnlyResidentOrUnitOwner();
 
@@ -52,6 +55,11 @@ abstract contract BuildingManagerElection {
         bool isRegistered;
     }
 
+    modifier noContract() {
+        if (tx.origin != msg.sender) revert ContractCall();
+        _;
+    }
+
     ElectionState private _electionState;
 
     mapping(uint256 tokenId => address voter) public voters;
@@ -75,7 +83,7 @@ abstract contract BuildingManagerElection {
         return _erc721TokenCount(owner) > 0;
     }
 
-    function registerCandidate(address candidate_) public {
+    function registerCandidate(address candidate_) public noContract {
         ElectionState electionState = _electionState;
         if (electionState != ElectionState.acceptCandidates)
             revert InvalidStatus(electionState, ElectionState.acceptCandidates);
