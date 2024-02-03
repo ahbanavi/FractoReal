@@ -48,6 +48,10 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
 
     mapping(uint256 tokenId => uint256) public meterages;
 
+    event phaseOneStartTimeSet(uint256 startTime);
+    event phaseTwoStartTimeSet(uint256 startTime);
+    event phaseTwoStarted();
+
     function setMeterages(
         uint256[] memory ids,
         uint256[] memory metrages_
@@ -147,6 +151,8 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
         }
 
         erc1155.mintBatch(owner(), unmintedTokens, unmintedTokensMeteres, "");
+
+        emit phaseTwoStarted();
     }
 
     function fractionize(address from, uint256 tokenId_) public {
@@ -161,10 +167,12 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
     // Contract time setting
     function setPhaseOneStartTime(uint256 startTime_) external onlyOwner {
         phaseOneStartTime = startTime_;
+        emit phaseOneStartTimeSet(startTime_);
     }
 
     function setPhaseTwoStartTime(uint256 startTime_) external onlyOwner {
         phaseTwoStartTime = startTime_;
+        emit phaseTwoStartTimeSet(startTime_);
     }
 
     /// Withdraw funds

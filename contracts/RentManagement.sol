@@ -25,6 +25,8 @@ abstract contract RentManagement is ERC721 {
 
     event RentPaid(uint256 indexed tokenId, address payer, uint256 amount);
     event RentWithdrawn(uint256 indexed tokenId, address to, uint256 amount);
+    event RentFeeSet(uint256 indexed tokenId, uint256 amount);
+    event ResidentSet(uint256 indexed tokenId, address resident);
 
     modifier onlyAuthorized(uint256 tokenId) {
         _checkAuthorized(_ownerOf(tokenId), msg.sender, tokenId);
@@ -63,6 +65,7 @@ abstract contract RentManagement is ERC721 {
         uint256 rentAmount
     ) external onlyAuthorized(tokenId) {
         rentsFee[tokenId] = rentAmount;
+        emit RentFeeSet(tokenId, rentAmount);
     }
 
     function setResident(
@@ -70,5 +73,6 @@ abstract contract RentManagement is ERC721 {
         address resident
     ) public onlyAuthorized(tokenId_) {
         residents[tokenId_] = resident;
+        emit ResidentSet(tokenId_, resident);
     }
 }
