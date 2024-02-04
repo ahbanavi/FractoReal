@@ -96,6 +96,16 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
         }
     }
 
+    /**
+     * @dev Function to mint a token during phase one of the sale.
+     * This function checks if the phase one sale has started and if the caller is not a contract.
+     * It then checks if the signature is valid and if the price paid is correct.
+     * If all checks pass, the token is minted and assigned to the caller.
+     *
+     * @param signature The signature of the message.
+     * @param tokenId The ID of the token to be minted.
+     * @param priceToPay The price in wei to be paid for the token.
+     */
     function phaseOneMint(
         bytes calldata signature,
         uint256 tokenId,
@@ -115,6 +125,7 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
             ).toEthSignedMessageHash().recover(signature) != owner()
         ) revert InvalidSigner();
 
+        // everything is ok, mint the token
         _mint(msg.sender, tokenId);
     }
 
@@ -124,19 +135,35 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
         erc1155 = erc1155Address;
     }
 
+    /**
+     * @dev Starts phase two of the minting process.
+     * This function checks if the phase two sale has started and if the ERC1155 address is set.
+     * It then mints the remaining tokens that have not been minted yet and assigns them to the ERC1155 contract.
+     * The token IDs and their corresponding meterages are stored in separate arrays.
+     * Finally, it calls the `mintBatch` function of the ERC1155 contract to mint the tokens in a batch.
+     * Emits a `phaseTwoStarted` event after the minting process is complete.
+     */
     function startPhaseTwoMint() public {
+        // Check if phase two sale has started
         if (block.timestamp < phaseTwoStartTime) revert PhaseSaleNotStarted();
+        // Check if ERC1155 address is set
         if (address(erc1155) == address(0)) revert ERC1155AddressNotSet();
 
+        // Calculate the number of remaining tokens to be minted
         uint256 arraySize = MAX_SUPPLY - totalSupply();
 
+        // Create arrays to store the unminted tokens and their meterages
         uint256[] memory unmintedTokens = new uint256[](arraySize);
         uint256[] memory unmintedTokensMeteres = new uint256[](arraySize);
 
         uint256 counter = 0;
+        // Iterate through the token IDs to find the unminted tokens
         for (uint256 tokenId_; tokenId_ != MAX_SUPPLY; ) {
+            // Check if the token is not owned by anyone
             if (_ownerOf(tokenId_) == address(0)) {
+                // Mint the token and assign it to the ERC1155 contract
                 _safeMint(address(erc1155), tokenId_);
+                // Store the token ID and its meterage in the arrays
                 unmintedTokens[counter] = tokenId_;
                 unmintedTokensMeteres[counter] = meterages[tokenId_];
 
@@ -150,8 +177,10 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
             }
         }
 
+        // Mint the unminted tokens in a batch using the ERC1155 contract
         erc1155.mintBatch(owner(), unmintedTokens, unmintedTokensMeteres, "");
 
+        // Emit an event to indicate that phase two has started
         emit phaseTwoStarted();
     }
 
