@@ -60,12 +60,12 @@ contract FractoRealFractions is
     }
 
     function mint(
-        address account,
+        address to,
         uint256 id,
         uint256 amount,
         bytes memory data
     ) public onlyERC721 {
-        _mint(account, id, amount, data);
+        _mint(to, id, amount, data);
     }
 
     function mintBatch(
@@ -77,7 +77,7 @@ contract FractoRealFractions is
         _mintBatch(to, ids, amounts, data);
     }
 
-    function burnAllAndTransferERC721(uint256 tokenId) public {
+    function rebuildNFT(uint256 tokenId) public {
         uint256 tokenIdTotalSupply = totalSupply(tokenId);
 
         if (tokenIdTotalSupply == 0) revert TokenIdNotSet();

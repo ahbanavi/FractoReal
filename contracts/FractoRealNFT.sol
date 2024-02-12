@@ -52,6 +52,14 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
     event phaseTwoStartTimeSet(uint256 startTime);
     event phaseTwoStarted();
 
+    /**
+     * @dev Sets the meterages for multiple NFTs.
+     * @param ids The array of NFT IDs.
+     * @param metrages_ The array of meterages corresponding to the NFT IDs.
+     * Requirements:
+     * - The `ids` and `metrages_` arrays must have the same length.
+     * - Only the contract owner can call this function.
+     */
     function setMeterages(
         uint256[] memory ids,
         uint256[] memory metrages_
@@ -184,12 +192,18 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
         emit phaseTwoStarted();
     }
 
+    /**
+     * @dev Fractionize a token by transferring it to the ERC1155 contract and minting a new token with fractional ownership.
+     * @param from The address of the token owner.
+     * @param tokenId_ The ID of the token to be fractionized.
+     */
     function fractionize(address from, uint256 tokenId_) public {
-        // first transfer to erc1155
-        // if tx sender os not the owner or approved by the owner then tx revert here
+        // First transfer to erc1155
+        // If the TX sender is not the owner or approved by the owner, then TX revert here.
+        // Also, if the erc1155 address is not set, this function reverts with an invalid receiver error.
         safeTransferFrom(from, address(erc1155), tokenId_);
 
-        // if previose owner of tokenId wasn't `from`, tx reverted in the last function
+        // If the previous owner of tokenId wasn't `from`, tx reverted in the last function
         erc1155.mint(from, tokenId_, meterages[tokenId_], "");
     }
 
