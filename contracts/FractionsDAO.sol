@@ -18,15 +18,15 @@ abstract contract FractionsDAO is ERC1155 {
     error TokenLocked(uint256 tokenId);
 
     event ProposalSubmitted(
-        uint256 indexed id,
+        uint256 indexed proposalId,
         address indexed proposer,
         uint256 indexed tokenId,
         string description
     );
-    event Voted(uint256 proposalId, address voter, bool vote);
-    event ProposalExecuted(uint256 proposalId);
-    event ProposalPassed(uint256 proposalId);
-    event ProposalRejected(uint256 proposalId);
+    event Voted(uint256 indexed proposalId, address voter, bool vote);
+    event ProposalExecuted(uint256 indexed proposalId);
+    event ProposalPassed(uint256 indexed proposalId);
+    event ProposalRejected(uint256 indexed proposalId);
 
     struct Proposal {
         uint256 id; // Unique proposal ID

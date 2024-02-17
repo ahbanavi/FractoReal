@@ -29,6 +29,8 @@ contract FractoRealFractions is
     FractionsDAO
 {
     event Received(address from, uint256 amount);
+    event RentSplited(uint256 indexed tokenId, uint256 rentAmount);
+    event RentWithdrawn(uint256 indexed tokenId, address indexed to, uint256 rentAmount);
 
     FractoRealNFT public immutable erc721;
     uint256 public nonSharesRents;
@@ -77,47 +79,63 @@ contract FractoRealFractions is
         _mintBatch(to, ids, amounts, data);
     }
 
+    /**
+     * @dev Rebuilds an NFT by burning all tokens of a given ID owned by the caller and transferring the ownership of the ERC721 token to the caller.
+     * @param tokenId The ID of the NFT to be rebuilt.
+     * @notice This function can only be called by the owner of all tokens of the given ID.
+     * @notice The total supply of the given ID must be set.
+     * @notice The caller must have ownership of all tokens of the given ID.
+     */
     function rebuildNFT(uint256 tokenId) public {
         uint256 tokenIdTotalSupply = totalSupply(tokenId);
 
+        // Check if the token ID is set
         if (tokenIdTotalSupply == 0) revert TokenIdNotSet();
+
+        // Check if the caller owns all tokens of the given ID
         if (balanceOf(msg.sender, tokenId) != tokenIdTotalSupply)
             revert OwnerDoesNotOwnAllTokens();
 
-        // Burn all tokens of this id for the owner
+        // Burn all tokens of the given ID owned by the caller, that means all tokens of the given ID will be burned
         _burn(msg.sender, tokenId, tokenIdTotalSupply);
 
-        // Transfer the ownership of the ERC721 token to the owner
+        // Transfer the ownership of the ERC721 token to the caller
         erc721.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
-    // write a function to withdraw rents from erc721 contract with withdrawRent function
-    // the rent should be split between token owners based on their share
-    function withdrawAndSplitRent(uint256 tokenId) external {
-        // call withdrawRent function of erc721 contract and get the rent amount
-        uint256 rentAmount = erc721.withdrawRent(tokenId);
 
-        uint256 totalShares = totalSupply(tokenId);
+/**
+ * @dev Splits the rent of a token among its share holders.
+ * @param tokenId The ID of the token.
+ */
+function splitRent(uint256 tokenId) external {
+    // call withdrawRent function of erc721 contract and get the rent amount
+    // if the rent amount is zero, it will revert
+    uint256 rentAmount = erc721.withdrawRent(tokenId);
 
-        uint256 shareHoldersShares = 0;
-        // for each token owner, calculate the rent amount based on their share
-        for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
-            uint256 share = tokenIdShareHolders[tokenId][i].share;
-            uint256 rent = (share * rentAmount) / totalShares;
-            shareHoldersShares += share;
+    uint256 totalShares = totalSupply(tokenId);
 
-            // increase the rents of the token owner
-            tokenIdShareHolders[tokenId][i].rents += rent;
-        }
+    uint256 shareHoldersShares = 0;
+    // for each token owner, calculate the rent amount based on their share
+    for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
+        uint256 share = tokenIdShareHolders[tokenId][i].share;
+        uint256 rent = (share * rentAmount) / totalShares;
+        shareHoldersShares += share;
 
-        // if the total shares of token owners is not equal to total shares of the token, then
-        // the remaining rent should be given to the owner of this contract
-        // that's because we don't set shares for the owner of this contract while minting to save gas
-        if (shareHoldersShares != totalShares) {
-            uint256 notSplitedRents = rentAmount - shareHoldersShares;
-            nonSharesRents += notSplitedRents;
-        }
+        // increase the rents of the token owner
+        tokenIdShareHolders[tokenId][i].rents += rent;
     }
+
+    // If the total shares of token owners is not equal to the total shares of the token,
+    // the remaining rent should be given to the owner of this contract.
+    // This is because we don't set shares for the owner of this contract while minting to save gas.
+    if (shareHoldersShares != totalShares) {
+        uint256 notSplitedRents = rentAmount - shareHoldersShares;
+        nonSharesRents += notSplitedRents;
+    }
+
+    emit RentSplited(tokenId, rentAmount);
+}
 
     function withdrawRent(uint256 tokenId) external {
         uint256 rentMoney = tokenIdShareHolders[tokenId][
@@ -129,6 +147,8 @@ contract FractoRealFractions is
         ].rents = 0;
 
         payable(msg.sender).transfer(rentMoney);
+
+        emit RentWithdrawn(tokenId, msg.sender, rentMoney);
     }
 
     function withdrawNonSharesRents() external onlyOwner {
