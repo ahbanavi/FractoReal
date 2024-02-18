@@ -14,6 +14,10 @@ abstract contract FractionsDAO is ERC1155 {
     // so we can revert transfer if there are active proposals
     mapping(uint256 tokenId => uint256 lock) public activeProposals;
 
+
+    /// Token ownership is required for the operation
+    error TokenOwnershipRequired();
+
     /// Token is locked due to an active proposal
     error TokenLocked(uint256 tokenId);
 
@@ -32,19 +36,27 @@ abstract contract FractionsDAO is ERC1155 {
         uint256 id; // Unique proposal ID
         uint256 tokenId; // Related ERC1155 token ID
         address proposer; // Proposal creator
-        uint256 voteThreshold; // Minimum voting power required to pass
+        uint256 voteThreshold; // Minimum voting power required to pass or reject the proposal
         uint256 voteEndTimestamp; // Timestamp when voting ends
         address targetAddress; // Address of the contract to call
+        bytes data; // Contract call data for the proposal
         bool passed; // Whether the proposal has passed
         bool rejected; // Whether the proposal has been rejected
-        bytes data; // Contract call data for the proposal
+        bool executed; // Whether the proposal has been executed
         uint256 votesFor; // Total votes for the proposal
         uint256 votesAgainst; // Total votes against the proposal
-        bool executed; // Whether the proposal has been executed
         string description; // Description of the proposal
     }
 
-    // Function to submit a new proposal
+    /**
+     * Submits a new proposal to the DAO.
+     * @param tokenId The ID of the token owned by the proposer.
+     * @param voteThreshold The minimum number of votes required for the proposal to pass or reject.
+     * @param targetAddress The address of the contract or account that the proposal is targeting.
+     * @param data The data to be executed if the proposal is approved.
+     * @param description A description of the proposal.
+     * @param voteEndTimestamp The timestamp indicating when the voting period for the proposal ends.
+     */
     function submitProposal(
         uint256 tokenId,
         uint256 voteThreshold,
@@ -54,10 +66,7 @@ abstract contract FractionsDAO is ERC1155 {
         uint256 voteEndTimestamp
     ) public {
         // Check if the proposer owns the specified tokenId
-        require(
-            balanceOf(msg.sender, tokenId) > 0,
-            "You must own tokens to create a proposal"
-        );
+        if (balanceOf(msg.sender, tokenId) == 0) revert TokenOwnershipRequired();
 
         uint256 proposalId = proposalsId;
 

@@ -28,6 +28,8 @@ contract FractoRealFractions is
     EIP712,
     FractionsDAO
 {
+    using Address for address payable;
+
     event Received(address from, uint256 amount);
     event RentSplited(uint256 indexed tokenId, uint256 rentAmount);
     event RentWithdrawn(uint256 indexed tokenId, address indexed to, uint256 rentAmount);
@@ -105,7 +107,7 @@ contract FractoRealFractions is
 
 
 /**
- * @dev Splits the rent of a token among its share holders.
+ * Splits the rent of a token among its share holders.
  * @param tokenId The ID of the token.
  */
 function splitRent(uint256 tokenId) external {
@@ -137,16 +139,23 @@ function splitRent(uint256 tokenId) external {
     emit RentSplited(tokenId, rentAmount);
 }
 
+    /**
+     * Allows a token holder to withdraw their accumulated rent for a specific token.
+     * @param tokenId The ID of the token.
+     */
     function withdrawRent(uint256 tokenId) external {
+        // Retrieve the rent amount for the token holder
         uint256 rentMoney = tokenIdShareHolders[tokenId][
             tokenIdShareHoldersIndex[tokenId][msg.sender] - 1
         ].rents;
 
+        // Set the rent amount to zero to prevent double withdrawal (reentrancy attack)
         tokenIdShareHolders[tokenId][
             tokenIdShareHoldersIndex[tokenId][msg.sender] - 1
         ].rents = 0;
 
-        payable(msg.sender).transfer(rentMoney);
+        // Transfer the rent amount to the token holder
+        payable(msg.sender).sendValue(rentMoney);
 
         emit RentWithdrawn(tokenId, msg.sender, rentMoney);
     }
@@ -154,7 +163,7 @@ function splitRent(uint256 tokenId) external {
     function withdrawNonSharesRents() external onlyOwner {
         uint256 rentMoney = nonSharesRents;
         nonSharesRents = 0;
-        payable(msg.sender).transfer(rentMoney);
+        payable(msg.sender).sendValue(rentMoney);
     }
 
     // function to recieve ether
