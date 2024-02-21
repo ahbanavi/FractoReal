@@ -20,10 +20,19 @@ abstract contract FractionsDAO is ERC1155 {
     /// Token is locked due to an active proposal
     error TokenLocked(uint256 tokenId);
 
+    /// Proposal has already been executed
+    error ProposalAlreadyExecuted(uint256 proposalId);
+
+    /// User has already voted for this proposal
+    error AlreadyVoted(uint256 proposalId, address voter);
+
+    /// Voting period has ended
+    error VotingPeriodEnded(uint256 proposalId, uint256 currentTimestamp);
+
     event ProposalSubmitted(
         uint256 indexed proposalId,
-        address indexed proposer,
         uint256 indexed tokenId,
+        address indexed proposer,
         string description
     );
     event Voted(uint256 indexed proposalId, address voter, bool vote);
@@ -91,27 +100,39 @@ abstract contract FractionsDAO is ERC1155 {
 
         activeProposals[tokenId]++;
 
-        emit ProposalSubmitted(proposalId, msg.sender, tokenId, description);
+        emit ProposalSubmitted(proposalId, tokenId, msg.sender, description);
 
         return proposalId;
     }
 
-    // Function to vote on a proposal
+    /**
+     * Allows a user to cast their vote on a proposal.
+     * @param proposalId The ID of the proposal.
+     * @param vote_ The vote (true for 'yes', false for 'no').
+     * Requirements:
+     * - The proposal must not have been executed.
+     * - The user must not have already voted for this proposal.
+     * - The voting period must not have ended.
+     * - The user must have a sufficient token balance for voting.
+     * Emits a {Voted} event.
+     * If the proposal receives enough votes, it will either pass or be rejected.
+     * If the proposal passes, it emits a {ProposalPassed} event and decreases the count of active proposals for the token.
+     * If the proposal is rejected, it emits a {ProposalRejected} event and decreases the count of active proposals for the token.
+     */
     function castVote(uint256 proposalId, bool vote_) public {
         Proposal storage proposal = proposals[proposalId];
 
-        require(!proposal.executed, "Proposal already executed");
-        require(
-            !hasVoted[proposalId][msg.sender],
-            "Already voted for this proposal"
-        );
-        require(
-            block.timestamp <= proposal.voteEndTimestamp,
-            "Voting period has ended"
-        );
+        if (proposal.executed) revert ProposalAlreadyExecuted(proposalId);
+
+        if (hasVoted[proposalId][msg.sender])
+            revert AlreadyVoted(proposalId, msg.sender);
+
+        if (block.timestamp > proposal.voteEndTimestamp)
+            revert VotingPeriodEnded(proposalId, block.timestamp);
 
         uint256 balance = balanceOf(msg.sender, proposal.tokenId);
-        require(balance > 0, "Insufficient token balance for voting");
+
+        if (balance == 0) revert TokenOwnershipRequired();
 
         if (vote_) {
             proposal.votesFor += balance;
