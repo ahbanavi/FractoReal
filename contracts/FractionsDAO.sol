@@ -14,7 +14,6 @@ abstract contract FractionsDAO is ERC1155 {
     // so we can revert transfer if there are active proposals
     mapping(uint256 tokenId => uint256 lock) public activeProposals;
 
-
     /// Token ownership is required for the operation
     error TokenOwnershipRequired();
 
@@ -56,6 +55,7 @@ abstract contract FractionsDAO is ERC1155 {
      * @param data The data to be executed if the proposal is approved.
      * @param description A description of the proposal.
      * @param voteEndTimestamp The timestamp indicating when the voting period for the proposal ends.
+     * @return The ID of the new proposal.
      */
     function submitProposal(
         uint256 tokenId,
@@ -64,9 +64,10 @@ abstract contract FractionsDAO is ERC1155 {
         bytes calldata data,
         string calldata description,
         uint256 voteEndTimestamp
-    ) public {
+    ) public returns (uint256) {
         // Check if the proposer owns the specified tokenId
-        if (balanceOf(msg.sender, tokenId) == 0) revert TokenOwnershipRequired();
+        if (balanceOf(msg.sender, tokenId) == 0)
+            revert TokenOwnershipRequired();
 
         uint256 proposalId = proposalsId;
 
@@ -91,6 +92,8 @@ abstract contract FractionsDAO is ERC1155 {
         activeProposals[tokenId]++;
 
         emit ProposalSubmitted(proposalId, msg.sender, tokenId, description);
+
+        return proposalId;
     }
 
     // Function to vote on a proposal
