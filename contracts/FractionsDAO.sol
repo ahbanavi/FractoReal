@@ -23,11 +23,20 @@ abstract contract FractionsDAO is ERC1155 {
     /// Proposal has already been executed
     error ProposalAlreadyExecuted(uint256 proposalId);
 
+    /// Proposal has already been rejected
+    error ProposalAlreadyRejected(uint256 proposalId);
+
+    /// Proposal has not passed
+    error ProposalNotPassed(uint256 proposalId);
+
     /// User has already voted for this proposal
     error AlreadyVoted(uint256 proposalId, address voter);
 
     /// Voting period has ended
     error VotingPeriodEnded(uint256 proposalId, uint256 currentTimestamp);
+
+    /// Proposal execution failed
+    error ProposalExecutionFailed(uint256 proposalId);
 
     event ProposalSubmitted(
         uint256 indexed proposalId,
@@ -158,17 +167,25 @@ abstract contract FractionsDAO is ERC1155 {
         }
     }
 
-    // Function to execute a passed proposal
-    function executePassedProposal(uint256 proposalId) public {
+    /**
+     * Executes a passed proposal.
+     * @param proposalId The ID of the proposal to be executed.
+     * Requirements:
+     * - The proposal must have passed.
+     * - The proposal must not have been executed.
+     * - The proposal must not have been rejected.
+     * Emits a {ProposalExecuted} event.
+     */
+    function executeProposal(uint256 proposalId) public {
         Proposal storage proposal = proposals[proposalId];
 
-        require(!proposal.executed, "Proposal already executed");
-        require(!proposal.rejected, "Proposal has been rejected");
-        require(proposal.passed, "Proposal has not passed yet");
+        if (proposal.executed) revert ProposalAlreadyExecuted(proposalId);
+        if (proposal.rejected) revert ProposalAlreadyRejected(proposalId);
+        if (!proposal.passed) revert ProposalNotPassed(proposalId);
 
         /// calls should be on behalf of the fractions contract
         (bool success, ) = proposal.targetAddress.call(proposal.data);
-        require(success, "Proposal execution failed");
+        if (!success) revert ProposalExecutionFailed(proposalId);
 
         proposal.executed = true;
         emit ProposalExecuted(proposalId);
