@@ -33,15 +33,18 @@ abstract contract BuildingManagerElection {
     /// Only resident or unit owner can call this function
     error OnlyResidentOrUnitOwner();
 
+    event StateChanged(ElectionState newState);
+
+    event CandidateRegistered(address candidate);
+
     event Voted(
         uint256 indexed tokenId,
         address indexed voter,
         address indexed candidate
     );
 
-    event StateChanged(ElectionState newState);
+    event BuildingManagerElected(address newBuildingManager);
 
-    event BuildingManagerChanged(address newBuildingManager);
 
     enum ElectionState {
         NotStarted,
@@ -83,10 +86,14 @@ abstract contract BuildingManagerElection {
         return _erc721TokenCount(owner) > 0;
     }
 
-    function registerCandidate(address candidate_) public noContract {
+    function registerCandidate() public noContract {
         ElectionState electionState = _electionState;
+
         if (electionState != ElectionState.acceptCandidates)
             revert InvalidStatus(electionState, ElectionState.acceptCandidates);
+
+        address candidate_ = msg.sender;
+
         if (!_ownsERC721(candidate_)) revert DoesNotOwnERC721();
 
         Candidate storage candidate = candidates[candidate_];
@@ -95,6 +102,8 @@ abstract contract BuildingManagerElection {
         candidate.candidate = candidate_;
         candidate.isRegistered = true;
         _candidateList.push(candidate_);
+
+        emit CandidateRegistered(candidate_);
     }
 
     function startElection() public {
@@ -109,6 +118,7 @@ abstract contract BuildingManagerElection {
 
     function startVoting(uint256 votingEnd_) public {
         ElectionState electionState = _electionState;
+
         if (electionState != ElectionState.acceptCandidates)
             revert InvalidStatus(electionState, ElectionState.acceptCandidates);
 
@@ -141,7 +151,7 @@ abstract contract BuildingManagerElection {
         emit Voted(tokenId, msg.sender, candidate_);
     }
 
-    function endVotingAndSelectWinner() public {
+    function finalizeElection() public {
         ElectionState electionState = _electionState;
         if (electionState != ElectionState.Voting)
             revert InvalidStatus(electionState, ElectionState.Voting);
@@ -192,7 +202,7 @@ abstract contract BuildingManagerElection {
         votingEnd = 0;
 
         emit StateChanged(ElectionState.NotStarted);
-        emit BuildingManagerChanged(winner);
+        emit BuildingManagerElected(winner);
     }
 
     function _erc721TokenCount(address owner) private view returns (uint256) {

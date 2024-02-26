@@ -19,11 +19,14 @@ contract ChargeManagement is BuildingManagerElection {
     /// Spend fee failed
     error SpendFailed();
 
-    // event for fee payments
+    /// event for fee payments
     event FeePaid(uint256 indexed tokenId, address payer, uint256 amount);
 
-    // event for fee spending
+    /// event for fee spending
     event FeeSpent(address to, uint256 amount);
+
+    /// event for fee amount change
+    event FeeAmountChanged(uint256 newFeeAmount);
 
     FractoRealNFT public immutable erc721;
 
@@ -62,6 +65,8 @@ contract ChargeManagement is BuildingManagerElection {
 
     function setFeeAmount(uint256 _feeAmount) external onlyBuildingManager {
         feeAmount = _feeAmount;
+
+        emit FeeAmountChanged(_feeAmount);
     }
 
     function setBuildingManager(address newBuildingManager) internal override {

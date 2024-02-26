@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./FractoRealNFT.sol";
 import "./FractionsDAO.sol";
@@ -32,7 +33,11 @@ contract FractoRealFractions is
 
     event Received(address from, uint256 amount);
     event RentSplited(uint256 indexed tokenId, uint256 rentAmount);
-    event RentWithdrawn(uint256 indexed tokenId, address indexed to, uint256 rentAmount);
+    event RentWithdrawn(
+        uint256 indexed tokenId,
+        address indexed to,
+        uint256 rentAmount
+    );
 
     FractoRealNFT public immutable erc721;
     uint256 public nonSharesRents;
@@ -105,39 +110,38 @@ contract FractoRealFractions is
         erc721.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
+    /**
+     * Splits the rent of a token among its share holders.
+     * @param tokenId The ID of the token.
+     */
+    function splitRent(uint256 tokenId) external {
+        // call withdrawRent function of erc721 contract and get the rent amount
+        // if the rent amount is zero, it will revert
+        uint256 rentAmount = erc721.withdrawRent(tokenId);
 
-/**
- * Splits the rent of a token among its share holders.
- * @param tokenId The ID of the token.
- */
-function splitRent(uint256 tokenId) external {
-    // call withdrawRent function of erc721 contract and get the rent amount
-    // if the rent amount is zero, it will revert
-    uint256 rentAmount = erc721.withdrawRent(tokenId);
+        uint256 totalShares = totalSupply(tokenId);
 
-    uint256 totalShares = totalSupply(tokenId);
+        uint256 shareHoldersShares = 0;
+        // for each token owner, calculate the rent amount based on their share
+        for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
+            uint256 share = tokenIdShareHolders[tokenId][i].share;
+            uint256 rent = (share * rentAmount) / totalShares;
+            shareHoldersShares += share;
 
-    uint256 shareHoldersShares = 0;
-    // for each token owner, calculate the rent amount based on their share
-    for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
-        uint256 share = tokenIdShareHolders[tokenId][i].share;
-        uint256 rent = (share * rentAmount) / totalShares;
-        shareHoldersShares += share;
+            // increase the rents of the token owner
+            tokenIdShareHolders[tokenId][i].rents += rent;
+        }
 
-        // increase the rents of the token owner
-        tokenIdShareHolders[tokenId][i].rents += rent;
+        // If the total shares of token owners is not equal to the total shares of the token,
+        // the remaining rent should be given to the owner of this contract.
+        // This is because we don't set shares for the owner of this contract while minting to save gas.
+        if (shareHoldersShares != totalShares) {
+            uint256 notSplitedRents = rentAmount - shareHoldersShares;
+            nonSharesRents += notSplitedRents;
+        }
+
+        emit RentSplited(tokenId, rentAmount);
     }
-
-    // If the total shares of token owners is not equal to the total shares of the token,
-    // the remaining rent should be given to the owner of this contract.
-    // This is because we don't set shares for the owner of this contract while minting to save gas.
-    if (shareHoldersShares != totalShares) {
-        uint256 notSplitedRents = rentAmount - shareHoldersShares;
-        nonSharesRents += notSplitedRents;
-    }
-
-    emit RentSplited(tokenId, rentAmount);
-}
 
     /**
      * Allows a token holder to withdraw their accumulated rent for a specific token.
