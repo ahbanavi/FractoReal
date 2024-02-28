@@ -44,6 +44,10 @@ contract ChargeManagement is BuildingManagerElection {
         erc721 = erc721_;
     }
 
+    /**
+     * Allows a resident or unit owner to pay the fee for a specific token ID.
+     * @param tokenId The ID of the token for which the fee is being paid.
+     */
     function payFee(
         uint256 tokenId
     ) external payable onlyResidentOrUnitOwner(tokenId) {
@@ -54,19 +58,30 @@ contract ChargeManagement is BuildingManagerElection {
         emit FeePaid(tokenId, msg.sender, msg.value);
     }
 
-    function spendFee(
-        uint256 _amount,
-        address to
-    ) external onlyBuildingManager {
-        payable(to).sendValue(_amount);
+    /**
+     * @dev Transfers a specified amount of Ether to the given address.
+     * Only the building manager is allowed to call this function.
+     * Emits a `FeeSpent` event after the transfer is completed.
+     *
+     * @param amount The amount of Ether to be transferred.
+     * @param to The address to which the Ether will be transferred.
+     */
+    function spendFee(uint256 amount, address to) external onlyBuildingManager {
+        payable(to).sendValue(amount);
 
-        emit FeeSpent(to, _amount);
+        emit FeeSpent(to, amount);
     }
 
-    function setFeeAmount(uint256 _feeAmount) external onlyBuildingManager {
-        feeAmount = _feeAmount;
+    /**
+     * Sets the fee amount for the building.
+     * Can only be called by the building manager.
+     * Emits a `FeeAmountChanged` event with the new fee amount.
+     * @param newFeeAmount The new fee amount to be set.
+     */
+    function setFeeAmount(uint256 newFeeAmount) external onlyBuildingManager {
+        feeAmount = newFeeAmount;
 
-        emit FeeAmountChanged(_feeAmount);
+        emit FeeAmountChanged(newFeeAmount);
     }
 
     function setBuildingManager(address newBuildingManager) internal override {
