@@ -1,20 +1,22 @@
 {
-  "name": "fractoreal",
-  "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "test:gas": "REPORT_GAS=true npx hardhat test",
-    "deploy": "hardhat deploy",
-    "node": "hardhat node"
-  },
-  "devDependencies": {
-    "@ethereum-waffle/mock-contract": "^4.0.4",
-    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "hardhat": "^2.19.2",
-    "hardhat-gas-reporter": "^1.0.9"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts": "^5.0.1",
-    "dotenv": "^16.3.1"
-  }
+    "name": "fractoreal",
+    "scripts": {
+        "compile": "hardhat compile",
+        "test": "hardhat test",
+        "test:gas": "REPORT_GAS=true npx hardhat test",
+        "deploy": "hardhat run scripts/deploy.ts",
+        "node": "hardhat node"
+    },
+    "devDependencies": {
+        "@ethereum-waffle/mock-contract": "^4.0.4",
+        "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+        "@nomicfoundation/hardhat-verify": "^2.0.5",
+        "hardhat": "^2.19.2",
+        "hardhat-gas-reporter": "^1.0.9"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^5.0.1",
+        "@types/prompt-sync": "^4.2.3",
+        "prompt-sync": "^4.2.0"
+    }
 }

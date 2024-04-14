@@ -52,6 +52,13 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
     event phaseTwoStartTimeSet(uint256 startTime);
     event phaseTwoStarted();
 
+    constructor(
+        address initialOwner,
+        uint256 maxSupply_
+    ) ERC721("FractoRealNFT", "FNT") Ownable(initialOwner) {
+        MAX_SUPPLY = maxSupply_;
+    }
+
     /**
      * @dev Sets the meterages for multiple NFTs.
      * @param ids The array of NFT IDs.
@@ -74,13 +81,6 @@ contract FractoRealNFT is ERC721, ERC721Enumerable, Ownable, RentManagement {
                     .unsafeMemoryAccess(i);
             }
         }
-    }
-
-    constructor(
-        address initialOwner,
-        uint256 maxSupply_
-    ) ERC721("FractoRealNFT", "FNT") Ownable(initialOwner) {
-        MAX_SUPPLY = maxSupply_;
     }
 
     modifier noContract() {
