@@ -7,7 +7,7 @@ abstract contract FractionsDAO is ERC1155 {
     uint256 public proposalsId;
 
     // Mapping of proposalIds to proposals
-    mapping(uint256 => Proposal) private proposals;
+    mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => mapping(address => bool)) public hasVoted;
 
     // write a mapping for token id to a number of active proposals
