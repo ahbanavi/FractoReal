@@ -41,6 +41,18 @@ describe("FractoRealFractions", function () {
         });
     });
 
+    describe("mint not allowd", () => {
+        it("should revert if not from erc721 contract", async () => {
+            const { frf, owner } = await loadFixture(deployAndMint);
+
+            await expect(frf.mint(owner.address, 1n, 1n, "0x")).to.be.revertedWithCustomError(frf, "OnlyERC721Allowed");
+            await expect(frf.mintBatch(owner.address, [1n], [1n], "0x")).to.be.revertedWithCustomError(
+                frf,
+                "OnlyERC721Allowed"
+            );
+        });
+    });
+
     describe("setURI", () => {
         it("Should revert if not owner", async () => {
             const { frf, minter } = await loadFixture(deployAndMint);
@@ -265,6 +277,21 @@ describe("FractoRealFractions", function () {
             await expect(frf.connect(owner).withdrawNonSharesRents()).not.to.be.reverted;
             // noneSharesRents should be 0
             expect(await frf.nonSharesRents()).to.be.equal(0n);
+
+            // branch coverage for situation that owner has no shares
+
+            // transfer remaining tokens to minter
+            await frf.safeTransferFrom(owner.address, minter.address, tokenId, ownerTokenAmount, "0x");
+            await expect(fnt.connect(resident).payRent(tokenId, { value: rentAmount }))
+                .to.emit(fnt, "RentPaid")
+                .withArgs(tokenId, resident.address, rentAmount);
+
+            // now split the rent
+            await expect(frf.connect(resident).splitRent(tokenId))
+                .to.emit(frf, "RentSplited")
+                .withArgs(tokenId, rentAmount);
+
+            // TODO: work here, use bps
         });
     });
 });
