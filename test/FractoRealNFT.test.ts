@@ -327,6 +327,13 @@ describe("FractoRealNFT", function () {
             await expect(fnt.startPhaseTwoMint()).to.be.revertedWithCustomError(fnt, "PhaseSaleNotStarted");
         });
 
+        it("should revert if erc1155 address not set", async () => {
+            const { fnt } = await loadFixture(deployFNT);
+            await fnt.setPhaseTwoStartTime(await time.latest());
+
+            await expect(fnt.startPhaseTwoMint()).to.be.revertedWithCustomError(fnt, "ERC1155AddressNotSet");
+        });
+
         it("should mint", async () => {
             const { fnt, owner } = await loadFixture(deployFNT);
             const { fractions } = await loadFixture(deployFractions);
@@ -628,6 +635,27 @@ describe("FractoRealNFT", function () {
                 expect(await fnt.balanceOf(owner.address)).to.be.equal(ids.length);
             });
         });
+
+        describe("setErc1155Address", () => {
+            it("should revert if not owner", async () => {
+                const { fnt, minter } = await loadFixture(deployFNT);
+                const { fractions } = await loadFixture(deployFractions);
+
+                await expect(
+                    fnt.connect(minter).setErc1155Address(await fractions.getAddress())
+                ).to.be.revertedWithCustomError(fnt, "OwnableUnauthorizedAccount");
+            });
+
+            it("should set erc1155 address", async () => {
+                const { fnt, owner } = await loadFixture(deployFNT);
+                const { fractions } = await loadFixture(deployFractions);
+
+                expect(await fnt.erc1155()).to.be.equal(ethers.ZeroAddress);
+
+                await fnt.connect(owner).setErc1155Address(await fractions.getAddress());
+                expect(await fnt.erc1155()).to.be.equal(await fractions.getAddress());
+            });
+        });
     });
 
     describe("RentManagement", () => {
@@ -671,6 +699,32 @@ describe("FractoRealNFT", function () {
                     "ERC721InsufficientApproval"
                 );
             });
+        });
+    });
+
+    describe("inharitance function tests", () => {
+        describe("supportsInterface", () => {
+            it("should return true for ERC721 interface", async () => {
+                const { fnt } = await loadFixture(deployFNT);
+
+                expect(await fnt.supportsInterface("0x80ac58cd")).to.be.true;
+            });
+        });
+    });
+
+    describe("noContract test", () => {
+        it("phaseOneMint should revert if request is from contract", async () => {
+            const { fnt } = await loadFixture(deployFNT);
+
+            // deploy ContractCallMock
+            const ContractCallMock = await ethers.getContractFactory("ContractCallMock");
+            const contractCallMock = await ContractCallMock.deploy(ethers.ZeroAddress, fnt.target);
+
+            // call registerCandidate from contract
+            await expect(contractCallMock.callPhaseOneMint()).to.be.revertedWithCustomError(
+                fnt,
+                "ContractMintNotAllowed"
+            );
         });
     });
 });

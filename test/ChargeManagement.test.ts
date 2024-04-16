@@ -306,11 +306,11 @@ describe("FractoRealFractions", function () {
 
     describe("noContract test", ()=> {
         it("registerCandidate should revert if request is from contract", async () => {
-            const { cm } = await loadFixture(deployAndMint);
+            const { cm, fnt } = await loadFixture(deployAndMint);
 
             // deploy ContractCallMock
             const ContractCallMock = await ethers.getContractFactory("ContractCallMock");
-            const contractCallMock = await ContractCallMock.deploy(cm.target);
+            const contractCallMock = await ContractCallMock.deploy(cm.target, fnt.target);
 
             // call registerCandidate from contract
             await expect(contractCallMock.callRegisterCandidate()).to.be.revertedWithCustomError(cm, "ContractCall");
