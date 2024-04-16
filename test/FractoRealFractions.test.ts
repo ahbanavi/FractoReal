@@ -126,7 +126,7 @@ describe("FractoRealFractions", function () {
             );
         });
 
-        it("behavioural: should split rent", async () => {
+        it("behavioural: should split and withdraw rent (testing DAO for setting resident and rent amount, splitRent and RentSplited)", async () => {
             const { frf, fnt, owner, minter, otherAccount, resident } = await loadFixture(deployAndMint);
             const tokenId = 10n;
             const total = tokenId + 1n;
@@ -135,8 +135,12 @@ describe("FractoRealFractions", function () {
             await expect(fnt.connect(minter).payRent(tokenId)).to.be.revertedWithCustomError(fnt, "OnlyResidents");
 
             // transfer 5 to minter, 4 to otherAccount
-            await frf.safeTransferFrom(owner.address, minter.address, tokenId, 5, "0x");
-            await frf.safeTransferFrom(owner.address, otherAccount.address, tokenId, 4, "0x");
+            const minterTokenAmount = 5n;
+            const otherAccountTokenAmount = 4n;
+            const ownerTokenAmount = total - (minterTokenAmount + otherAccountTokenAmount);
+
+            await frf.safeTransferFrom(owner.address, minter.address, tokenId, minterTokenAmount, "0x");
+            await frf.safeTransferFrom(owner.address, otherAccount.address, tokenId, otherAccountTokenAmount, "0x");
 
             expect(await frf.balanceOf(minter.address, tokenId)).to.be.equal(5);
             expect(await frf.balanceOf(otherAccount.address, tokenId)).to.be.equal(4);
@@ -222,7 +226,46 @@ describe("FractoRealFractions", function () {
                 .to.emit(frf, "RentSplited")
                 .withArgs(tokenId, rentAmount);
 
-            // TODO: continue here to check tokenIdShareHolders and withdrwal of rents
+            // now get the shares
+            const minterShare = await frf.getShareHolderInfo(tokenId, minter.address);
+            const otherAccountShare = await frf.getShareHolderInfo(tokenId, otherAccount.address);
+
+            // sanity check getShareHolderInfo to return 0 for owner
+            const ownerShare = await frf.getShareHolderInfo(tokenId, owner.address);
+            expect(ownerShare[0]).to.be.equal(ethers.ZeroAddress);
+            expect(ownerShare[1]).to.be.equal(0n);
+            expect(ownerShare[2]).to.be.equal(0n);
+
+
+            const minterRentShare = (minterTokenAmount * rentAmount) / total;
+            const otherAccountRentShare = (otherAccountTokenAmount * rentAmount) / total;
+            const ownerRentShare = Math.ceil((Number(ownerTokenAmount) * Number(rentAmount)) / Number(total));
+
+            // return type is [address address, uint256 share, uint256 rent]
+            // check all three values
+            expect(minterShare[0]).to.be.equal(minter.address);
+            expect(minterShare[1]).to.be.equal(minterTokenAmount);
+            expect(minterShare[2]).to.be.equal(minterRentShare);
+
+            expect(otherAccountShare[0]).to.be.equal(otherAccount.address);
+            expect(otherAccountShare[1]).to.be.equal(otherAccountTokenAmount);
+            expect(otherAccountShare[2]).to.be.equal(otherAccountRentShare);
+
+            // check owner share
+            expect(await frf.nonSharesRents()).to.be.equal(ownerRentShare);
+
+            // check witdraw
+            await expect(frf.connect(minter).withdrawRent(tokenId))
+                .to.emit(frf, "RentWithdrawn")
+                .withArgs(tokenId, minter.address, minterRentShare);
+            await expect(frf.connect(otherAccount).withdrawRent(tokenId))
+                .to.emit(frf, "RentWithdrawn")
+                .withArgs(tokenId, otherAccount.address, otherAccountRentShare);
+
+            // check if owner can withdraw using withdrawNonSharesRents
+            await expect(frf.connect(owner).withdrawNonSharesRents()).not.to.be.reverted;
+            // noneSharesRents should be 0
+            expect(await frf.nonSharesRents()).to.be.equal(0n);
         });
     });
 });

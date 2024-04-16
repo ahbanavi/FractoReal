@@ -427,10 +427,10 @@ describe("FractoRealNFT", function () {
             expect(await fnt.ownerOf(tokenId)).to.be.equal(await fractions.getAddress());
 
             // check shareHolders
-            const shareHolders = await fractions.tokenIdShareHolders(tokenId, 0n);
-            expect(shareHolders.holder).to.be.equal(minter.address);
-            expect(shareHolders.share).to.be.equal(meters);
-            expect(shareHolders.rents).to.be.equal(0n);
+            const shareHolders = await fractions.getShareHolderInfo(tokenId, minter.address);
+            expect(shareHolders[0]).to.be.equal(minter.address);
+            expect(shareHolders[1]).to.be.equal(meters);
+            expect(shareHolders[2]).to.be.equal(0n);
         });
     });
 

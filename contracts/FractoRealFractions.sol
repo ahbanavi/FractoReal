@@ -48,9 +48,9 @@ contract FractoRealFractions is
         uint256 rents;
     }
 
-    mapping(uint256 tokenId => shareHolders[]) public tokenIdShareHolders;
-    mapping(uint256 => mapping(address => uint256))
-        public tokenIdShareHoldersIndex;
+    mapping(uint256 tokenId => shareHolders[]) private tokenIdShareHolders;
+    mapping(uint256 tokenId => mapping(address holder => uint256 index))
+        private tokenIdShareHoldersIndex;
 
     constructor(
         address initialOwner,
@@ -110,6 +110,19 @@ contract FractoRealFractions is
         erc721.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
+    function getShareHolderInfo(
+        uint256 tokenId,
+        address holder
+    ) external view returns (shareHolders memory) {
+        uint256 index = tokenIdShareHoldersIndex[tokenId][holder];
+        if (index == 0) {
+            // return zero
+            return shareHolders(address(0), 0, 0);
+        }
+
+        return tokenIdShareHolders[tokenId][index - 1];
+    }
+
     /**
      * Splits the rent of a token among its share holders.
      * @param tokenId The ID of the token.
@@ -121,22 +134,22 @@ contract FractoRealFractions is
 
         uint256 totalShares = totalSupply(tokenId);
 
-        uint256 shareHoldersShares = 0;
+        uint256 sharedRents = 0;
         // for each token owner, calculate the rent amount based on their share
         for (uint256 i = 0; i < tokenIdShareHolders[tokenId].length; i++) {
             uint256 share = tokenIdShareHolders[tokenId][i].share;
             uint256 rent = (share * rentAmount) / totalShares;
-            shareHoldersShares += share;
+            sharedRents += rent;
 
             // increase the rents of the token owner
             tokenIdShareHolders[tokenId][i].rents += rent;
         }
 
-        // If the total shares of token owners is not equal to the total shares of the token,
+        // If the total rents shares of token owners is not equal to the total shares of the token,
         // the remaining rent should be given to the owner of this contract.
         // This is because we don't set shares for the owner of this contract while minting to save gas.
-        if (shareHoldersShares != totalShares) {
-            uint256 notSplitedRents = rentAmount - shareHoldersShares;
+        if (sharedRents != rentAmount) {
+            uint256 notSplitedRents = rentAmount - sharedRents;
             nonSharesRents += notSplitedRents;
         }
 
