@@ -30,7 +30,7 @@ describe("FractoRealFractions", function () {
 
     describe("Deployment", () => {
         it("Should deploy and mint", async () => {
-            const { frf, fnt, owner, otherAccount, minter, addrs } = await loadFixture(deployAndMint);
+            const { frf, fnt, owner } = await loadFixture(deployAndMint);
 
             expect(await frf.owner()).to.equal(owner.address);
             expect(await frf.erc721()).to.equal(await fnt.getAddress());
@@ -235,7 +235,6 @@ describe("FractoRealFractions", function () {
             expect(ownerShare[0]).to.be.equal(ethers.ZeroAddress);
             expect(ownerShare[1]).to.be.equal(0n);
             expect(ownerShare[2]).to.be.equal(0n);
-
 
             const minterRentShare = (minterTokenAmount * rentAmount) / total;
             const otherAccountRentShare = (otherAccountTokenAmount * rentAmount) / total;
