@@ -7,11 +7,11 @@ describe("FractoRealNFT", function () {
     const MAX_SUPPLY = 50n;
 
     async function deployFNT() {
-        const [owner, otherAccount, minter, ...addrs] = await ethers.getSigners();
+        const [owner, otherAccount, minter, resident, ...addrs] = await ethers.getSigners();
 
         const FNT = await ethers.getContractFactory("FractoRealNFT");
         const fnt = await FNT.deploy(owner.address, MAX_SUPPLY);
-        return { fnt, owner, otherAccount, minter, addrs };
+        return { fnt, owner, otherAccount, minter, resident, addrs };
     }
 
     async function deployFractions() {
@@ -626,6 +626,50 @@ describe("FractoRealNFT", function () {
 
                 expect(await fnt.totalSupply()).to.be.equal(ids.length);
                 expect(await fnt.balanceOf(owner.address)).to.be.equal(ids.length);
+            });
+        });
+    });
+
+    describe("RentManagement", () => {
+        describe("Reverts test, other test are done with DAO in frf", () => {
+            it("should revert on setResident if not authorized", async () => {
+                const { fnt, minter, otherAccount, resident } = await loadFixture(deployFNT);
+                const tokenId = 10n;
+
+                // mint for minter
+                await fnt.mint(minter.address, tokenId);
+
+                await expect(
+                    fnt.connect(otherAccount).setResident(tokenId, resident.address)
+                ).to.be.revertedWithCustomError(fnt, "ERC721InsufficientApproval");
+            });
+
+            // setRentFee
+            it("should revert on setRentFee if not authorized", async () => {
+                const { fnt, minter, otherAccount } = await loadFixture(deployFNT);
+                const tokenId = 10n;
+
+                // mint for minter
+                await fnt.mint(minter.address, tokenId);
+
+                await expect(fnt.connect(otherAccount).setRentFee(tokenId, 1000n)).to.be.revertedWithCustomError(
+                    fnt,
+                    "ERC721InsufficientApproval"
+                );
+            });
+
+            // withdrawRent
+            it("should revert on withdrawRent if not authorized", async () => {
+                const { fnt, minter, otherAccount } = await loadFixture(deployFNT);
+                const tokenId = 10n;
+
+                // mint for minter
+                await fnt.mint(minter.address, tokenId);
+
+                await expect(fnt.connect(otherAccount).withdrawRent(tokenId)).to.be.revertedWithCustomError(
+                    fnt,
+                    "ERC721InsufficientApproval"
+                );
             });
         });
     });
