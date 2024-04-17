@@ -710,6 +710,24 @@ describe("FractoRealNFT", function () {
                 expect(await fnt.supportsInterface("0x80ac58cd")).to.be.true;
             });
         });
+
+        describe("_increaseBalance", () => {
+            it("should increase Balance for selected token", async () => {
+                const { fnt, owner } = await loadFixture(deployFNT);
+
+                // deploy ContractCallMock
+                const Mock = await ethers.getContractFactory("IncreaseBalanceTestMock");
+                const m = await Mock.deploy(owner.address, 10n);
+
+                const tokenId = 1n;
+                const amount = 1000n;
+
+                await expect(m.testIncreaseBalance(owner.address, amount)).to.be.revertedWithCustomError(
+                    fnt,
+                    "ERC721EnumerableForbiddenBatchMint"
+                );
+            });
+        });
     });
 
     describe("noContract test", () => {
