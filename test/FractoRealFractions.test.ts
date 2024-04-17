@@ -138,11 +138,11 @@ describe("FractoRealFractions", function () {
             );
         });
 
-        it("behavioural: should split and withdraw rent (testing DAO for setting resident and rent amount, splitRent and RentSplited)", async () => {
+        it("behavioural: DAO and split and withdraw rent (testing DAO for proposals, splitRent and RentSplited)", async () => {
             const { frf, fnt, owner, minter, otherAccount, resident } = await loadFixture(deployAndMint);
-            const tokenId = 10n;
+            const tokenId = 11n;
             const total = tokenId + 1n;
-            const rentAmount = 100n;
+            const rentAmount = ethers.parseEther("3");
 
             await expect(fnt.connect(minter).payRent(tokenId)).to.be.revertedWithCustomError(fnt, "OnlyResidents");
 
@@ -198,26 +198,97 @@ describe("FractoRealFractions", function () {
             await frf.connect(otherAccount).castVote(proposalId, true);
             await frf.connect(owner).castVote(proposalId, true);
 
+            // cast against vote with minter
+            await frf.connect(minter).castVote(proposalId, false);
+
+            // check vote counts
+            expect(await frf.proposals(proposalId)).to.be.deep.equal([
+                proposalId,
+                tokenId,
+                minter.address,
+                5n,
+                endTimestamp,
+                fnt.target,
+                data,
+                true,
+                false,
+                false,
+                ownerTokenAmount + otherAccountTokenAmount,
+                minterTokenAmount,
+                "seting resident",
+            ]);
+
             // sanity check before changing resident
             expect(await fnt.residents(tokenId)).to.be.equal(ethers.ZeroAddress);
 
-            await expect(frf.executeProposal(proposalId)).to.emit(frf, "ProposalExecuted").withArgs(proposalId);
+            await expect(frf.executeProposal(proposalId)).to.emit(frf, "ProposalExecuted");
+
+            // check if revert with ProposalAlreadyExecuted(proposalId)
+            await expect(frf.executeProposal(proposalId))
+                .to.be.revertedWithCustomError(frf, "ProposalAlreadyExecuted")
+                .withArgs(proposalId);
 
             // check resident
             expect(await fnt.residents(tokenId)).to.be.equal(resident.address);
+
+            // check if submitProposal revert for non share holders (e.g. resident)
+            await expect(
+                frf.connect(resident).submitProposal(tokenId, 5n, fnt.target, setRentdata, "seting rent", endTimestamp)
+            ).to.be.revertedWithCustomError(frf, "TokenOwnershipRequired");
 
             // now set rent
             const proposalId2 = await frf.proposalsId();
             await frf.connect(minter).submitProposal(tokenId, 5n, fnt.target, setRentdata, "seting rent", endTimestamp);
 
+            // check if token is locked from transfer
+            await expect(frf.safeTransferFrom(owner.address, otherAccount.address, tokenId, ownerTokenAmount, "0x"))
+                .to.be.revertedWithCustomError(frf, "TokenLocked")
+                .withArgs(tokenId);
+
+            // check isTokenLocked
+            expect(await frf.isTokenLocked(tokenId)).to.be.true;
+
+            // check activeProposals
+            expect(await frf.activeProposals(tokenId)).to.be.equal(1n);
+
             // cast vote
             await frf.connect(otherAccount).castVote(proposalId2, true);
             await frf.connect(owner).castVote(proposalId2, true);
 
+            // check if revert with AlreadyVoted
+            await expect(frf.connect(otherAccount).castVote(proposalId2, true))
+                .to.be.revertedWithCustomError(frf, "AlreadyVoted")
+                .withArgs(proposalId2, otherAccount.address);
+
+            // set timestamp after endTimestamp
+            await time.increaseTo(endTimestamp);
+
+            // check if cast vote revert with VotingPeriodEnded(proposalId, block.timestamp)
+            await expect(frf.connect(minter).castVote(proposalId2, true))
+                .to.be.revertedWithCustomError(frf, "VotingPeriodEnded")
+                .withArgs(proposalId2, endTimestamp + 1);
+
             // sanity check before changing rent
             expect(await fnt.rentsFee(tokenId)).to.be.equal(0);
 
-            await expect(frf.executeProposal(proposalId2)).to.emit(frf, "ProposalExecuted").withArgs(proposalId2);
+            const response = fnt.interface.encodeFunctionResult("setRentFee");
+
+            await expect(frf.executeProposal(proposalId2))
+                .to.emit(frf, "ProposalExecuted")
+                .withArgs(proposalId2, response)
+                .to.emit(fnt, "RentFeeSet")
+                .withArgs(tokenId, rentAmount);
+
+            // check if castVote revert with executed
+            await expect(frf.connect(otherAccount).castVote(proposalId2, true))
+                .to.be.revertedWithCustomError(frf, "ProposalAlreadyExecuted")
+                .withArgs(proposalId2);
+
+            // check isTokenLocked
+            expect(await frf.isTokenLocked(tokenId)).to.be.false;
+
+            // check activeProposals
+            expect(await frf.activeProposals(tokenId)).to.be.equal(0n);
 
             // check rent
             expect(await fnt.rentsFee(tokenId)).to.be.equal(rentAmount);
@@ -250,7 +321,7 @@ describe("FractoRealFractions", function () {
 
             const minterRentShare = (minterTokenAmount * rentAmount) / total;
             const otherAccountRentShare = (otherAccountTokenAmount * rentAmount) / total;
-            const ownerRentShare = Math.ceil((Number(ownerTokenAmount) * Number(rentAmount)) / Number(total));
+            const ownerRentShare = rentAmount - (minterRentShare + otherAccountRentShare);
 
             // return type is [address address, uint256 share, uint256 rent]
             // check all three values
@@ -275,13 +346,20 @@ describe("FractoRealFractions", function () {
 
             // check if owner can withdraw using withdrawNonSharesRents
             await expect(frf.connect(owner).withdrawNonSharesRents()).not.to.be.reverted;
+
+            // also check non owner call to this function
+            await expect(frf.connect(minter).withdrawNonSharesRents()).to.be.revertedWithCustomError(
+                frf,
+                "OwnableUnauthorizedAccount"
+            );
+
             // noneSharesRents should be 0
             expect(await frf.nonSharesRents()).to.be.equal(0n);
 
             // branch coverage for situation that owner has no shares
 
             // transfer remaining tokens to minter
-            await frf.safeTransferFrom(owner.address, minter.address, tokenId, ownerTokenAmount, "0x");
+            await frf.safeTransferFrom(owner.address, otherAccount.address, tokenId, ownerTokenAmount, "0x");
             await expect(fnt.connect(resident).payRent(tokenId, { value: rentAmount }))
                 .to.emit(fnt, "RentPaid")
                 .withArgs(tokenId, resident.address, rentAmount);
@@ -291,7 +369,64 @@ describe("FractoRealFractions", function () {
                 .to.emit(frf, "RentSplited")
                 .withArgs(tokenId, rentAmount);
 
-            // TODO: work here, use bps
+            const minterRentShare2 = (minterTokenAmount * rentAmount) / total;
+            const otherAccountRentShare2 = ((otherAccountTokenAmount + ownerTokenAmount) * rentAmount) / total;
+            const ownerRentShare2 = rentAmount - (minterRentShare2 + otherAccountRentShare2);
+
+            expect(ownerRentShare2).to.be.equal(0n);
+
+            // now get the shares
+            const minterShare2 = await frf.getShareHolderInfo(tokenId, minter.address);
+            const otherAccountShare2 = await frf.getShareHolderInfo(tokenId, otherAccount.address);
+
+            // return type is [address address, uint256 share, uint256 rent]
+            // check all three values
+            expect(minterShare2[0]).to.be.equal(minter.address);
+            expect(minterShare2[1]).to.be.equal(minterTokenAmount);
+            expect(minterShare2[2]).to.be.equal(minterRentShare2);
+
+            expect(otherAccountShare2[0]).to.be.equal(otherAccount.address);
+            expect(otherAccountShare2[1]).to.be.equal(otherAccountTokenAmount + ownerTokenAmount);
+            expect(otherAccountShare2[2]).to.be.equal(otherAccountRentShare2);
+
+            // check owner share
+            expect(await frf.nonSharesRents()).to.be.equal(ownerRentShare2);
+
+            // > reject a proposal test
+
+            // new endTimestamp
+            const endTimestamp2 = (await time.latest()) + 600;
+            const proposalId3 = await frf.proposalsId();
+            await frf.connect(minter).submitProposal(tokenId, 5n, fnt.target, data, "seting resident", endTimestamp2);
+
+            // cast against vote with minter
+            await expect(frf.connect(otherAccount).castVote(proposalId3, false))
+                .to.emit(frf, "ProposalRejected")
+                .withArgs(proposalId3);
+
+            // check execute also revert with ProposalAlreadyRejected
+            await expect(frf.executeProposal(proposalId3))
+                .to.be.revertedWithCustomError(frf, "ProposalAlreadyRejected")
+                .withArgs(proposalId3);
+
+            // > test ProposalExecutionFailed, create a proposal with wrong data
+            const wrongData = fnt.interface.encodeFunctionData("setResident", [100n, ethers.ZeroAddress]);
+
+            const proposalId4 = await frf.proposalsId();
+            await frf
+                .connect(minter)
+                .submitProposal(tokenId, 5n, fnt.target, wrongData, "seting resident", endTimestamp2);
+
+            // cast vote
+            await frf.connect(otherAccount).castVote(proposalId4, true);
+
+            // encode reason (custom error notauthorzeid of fnt contract)
+            const reason = fnt.interface.encodeErrorResult("ERC721NonexistentToken", [100n]);
+
+            // execute
+            await expect(frf.executeProposal(proposalId4))
+                .to.be.revertedWithCustomError(frf, "ProposalExecutionFailed")
+                .withArgs(proposalId4, reason);
         });
     });
 });
