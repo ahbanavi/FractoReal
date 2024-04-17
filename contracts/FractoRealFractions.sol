@@ -148,6 +148,9 @@ contract FractoRealFractions is
         // If the total rents shares of token owners is not equal to the total shares of the token,
         // the remaining rent should be given to the owner of this contract.
         // This is because we don't set shares for the owner of this contract while minting to save gas.
+        // also there might be a case of uneven shares after dividing, so the remaining rent (1 to 9 wei)
+        // is given to the owner for simplicity. if we try to log the remaining rent, it will be lost in gas fees
+        // and not worth it.
         if (sharedRents != rentAmount) {
             uint256 notSplitedRents = rentAmount - sharedRents;
             nonSharesRents += notSplitedRents;
