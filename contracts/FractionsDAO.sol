@@ -36,7 +36,7 @@ abstract contract FractionsDAO is ERC1155 {
     error VotingPeriodEnded(uint256 proposalId, uint256 currentTimestamp);
 
     /// Proposal execution failed
-    error ProposalExecutionFailed(uint256 proposalId);
+    error ProposalExecutionFailed(uint256 proposalId, bytes data);
 
     event ProposalSubmitted(
         uint256 indexed proposalId,
@@ -45,7 +45,7 @@ abstract contract FractionsDAO is ERC1155 {
         string description
     );
     event Voted(uint256 indexed proposalId, address voter, bool vote);
-    event ProposalExecuted(uint256 indexed proposalId);
+    event ProposalExecuted(uint256 indexed proposalId, bytes data);
     event ProposalPassed(uint256 indexed proposalId);
     event ProposalRejected(uint256 indexed proposalId);
 
@@ -156,14 +156,16 @@ abstract contract FractionsDAO is ERC1155 {
         uint256 voteThreshold = proposal.voteThreshold;
 
         // Check if the proposal has passed
-        if (proposal.votesFor >= voteThreshold) {
-            proposal.passed = true;
-            emit ProposalPassed(proposalId);
-            activeProposals[proposal.tokenId]--;
-        } else if (proposal.votesAgainst >= voteThreshold) {
-            proposal.rejected = true;
-            emit ProposalRejected(proposalId);
-            activeProposals[proposal.tokenId]--;
+        if (!proposal.rejected && !proposal.passed) {
+            if (proposal.votesFor >= voteThreshold) {
+                proposal.passed = true;
+                emit ProposalPassed(proposalId);
+                activeProposals[proposal.tokenId]--;
+            } else if (proposal.votesAgainst >= voteThreshold) {
+                proposal.rejected = true;
+                emit ProposalRejected(proposalId);
+                activeProposals[proposal.tokenId]--;
+            }
         }
     }
 
@@ -184,11 +186,13 @@ abstract contract FractionsDAO is ERC1155 {
         if (!proposal.passed) revert ProposalNotPassed(proposalId);
 
         /// calls should be on behalf of the fractions contract
-        (bool success, ) = proposal.targetAddress.call(proposal.data);
-        if (!success) revert ProposalExecutionFailed(proposalId);
+        (bool success, bytes memory data) = proposal.targetAddress.call(
+            proposal.data
+        );
+        if (!success) revert ProposalExecutionFailed(proposalId, data);
 
         proposal.executed = true;
-        emit ProposalExecuted(proposalId);
+        emit ProposalExecuted(proposalId, data);
     }
 
     // function to check if a token is locked
