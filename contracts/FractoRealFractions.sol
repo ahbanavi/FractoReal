@@ -42,13 +42,13 @@ contract FractoRealFractions is
     FractoRealNFT public immutable erc721;
     uint256 public nonSharesRents;
 
-    struct shareHolders {
+    struct ShareHolders {
         address holder;
         uint256 share;
         uint256 rents;
     }
 
-    mapping(uint256 tokenId => shareHolders[]) private tokenIdShareHolders;
+    mapping(uint256 tokenId => ShareHolders[]) private tokenIdShareHolders;
     mapping(uint256 tokenId => mapping(address holder => uint256 index))
         private tokenIdShareHoldersIndex;
 
@@ -113,11 +113,11 @@ contract FractoRealFractions is
     function getShareHolderInfo(
         uint256 tokenId,
         address holder
-    ) external view returns (shareHolders memory) {
+    ) external view returns (ShareHolders memory) {
         uint256 index = tokenIdShareHoldersIndex[tokenId][holder];
         if (index == 0) {
             // return zero
-            return shareHolders(address(0), 0, 0);
+            return ShareHolders(address(0), 0, 0);
         }
 
         return tokenIdShareHolders[tokenId][index - 1];
@@ -240,7 +240,7 @@ contract FractoRealFractions is
                 tokenIdShareHolders[tokenId][index].share += value;
             } else {
                 tokenIdShareHolders[tokenId].push(
-                    shareHolders({holder: to, share: value, rents: 0})
+                    ShareHolders({holder: to, share: value, rents: 0})
                 );
                 tokenIdShareHoldersIndex[tokenId][to] = tokenIdShareHolders[
                     tokenId
