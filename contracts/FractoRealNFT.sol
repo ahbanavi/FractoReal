@@ -12,8 +12,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./FractoRealFractions.sol";
 import "./RentManagement.sol";
 
-import "hardhat/console.sol";
-
 /// Phase one or two has not started yet.
 error PhaseSaleNotStarted();
 /// Phase one or two has ended.
