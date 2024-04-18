@@ -67,9 +67,9 @@ contract ChargeManagement is BuildingManagerElection {
      * @param to The address to which the Ether will be transferred.
      */
     function spendFee(uint256 amount, address to) external onlyBuildingManager {
-        payable(to).sendValue(amount);
-
         emit FeeSpent(to, amount);
+
+        payable(to).sendValue(amount);
     }
 
     /**
