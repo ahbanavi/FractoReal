@@ -140,3 +140,5 @@ dist
 # solidity-coverage files
 /coverage
 /coverage.json
+
+/venv
