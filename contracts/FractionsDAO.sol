@@ -185,13 +185,15 @@ abstract contract FractionsDAO is ERC1155 {
         if (proposal.rejected) revert ProposalAlreadyRejected(proposalId);
         if (!proposal.passed) revert ProposalNotPassed(proposalId);
 
+        // to prevent re-entrancy
+        proposal.executed = true;
+
         /// calls should be on behalf of the fractions contract
         (bool success, bytes memory data) = proposal.targetAddress.call(
             proposal.data
         );
         if (!success) revert ProposalExecutionFailed(proposalId, data);
 
-        proposal.executed = true;
         emit ProposalExecuted(proposalId, data);
     }
 

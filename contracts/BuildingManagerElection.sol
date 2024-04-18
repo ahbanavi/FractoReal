@@ -191,7 +191,7 @@ abstract contract BuildingManagerElection {
         if (block.timestamp < votingEnd) revert VotingNotEnded();
 
         // Find the candidate with the most votes
-        uint256 maxVotes;
+        uint256 maxVotes = 0;
         Candidate storage winningCandidate = candidates[_candidateList[0]];
         uint256 length = _candidateList.length;
         for (uint256 i; i != length; ) {
