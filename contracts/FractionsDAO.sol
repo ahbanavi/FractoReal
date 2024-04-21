@@ -38,6 +38,9 @@ abstract contract FractionsDAO is ERC1155 {
     /// Proposal execution failed
     error ProposalExecutionFailed(uint256 proposalId, bytes data);
 
+    /// Address has no code
+    error AddressEmptyCode(address target);
+
     event ProposalSubmitted(
         uint256 indexed proposalId,
         uint256 indexed tokenId,
@@ -88,6 +91,9 @@ abstract contract FractionsDAO is ERC1155 {
             revert TokenOwnershipRequired();
 
         uint256 proposalId = proposalsId;
+
+        // if targetAddress is not a contract, revert
+        if (targetAddress.code.length == 0) revert AddressEmptyCode(targetAddress);
 
         proposals[proposalId] = Proposal({
             id: proposalId,

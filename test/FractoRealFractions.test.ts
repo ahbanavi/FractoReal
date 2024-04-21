@@ -170,6 +170,13 @@ describe("FractoRealFractions", function () {
             const proposalId = await frf.proposalsId();
             await frf.connect(minter).submitProposal(tokenId, 5n, fnt.target, data, "seting resident", endTimestamp);
 
+            // also check that it revert with AddressEmptyCode(targetAddress) with no contract addresses
+            await expect(
+                frf.connect(minter).submitProposal(tokenId, 5n, owner.address, data, "seting resident", endTimestamp)
+            )
+                .to.be.revertedWithCustomError(frf, "AddressEmptyCode")
+                .withArgs(owner.address);
+
             // check if proposal is created
             expect(await frf.proposals(proposalId)).to.be.deep.equal([
                 proposalId,
