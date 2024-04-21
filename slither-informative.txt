@@ -1,0 +1,15 @@
+(venv) ➜  FractoReal git:(main) slither . --exclude-low
+'npx hardhat clean' running (wd: /home/yedoost/w/github.com/ahbanavi/FractoReal)
+'npx hardhat clean --global' running (wd: /home/yedoost/w/github.com/ahbanavi/FractoReal)
+'npx hardhat compile --force' running (wd: /home/yedoost/w/github.com/ahbanavi/FractoReal)
+INFO:Detectors:
+BuildingManagerElection.finalizeElection() (contracts/BuildingManagerElection.sol#182-240) has costly operations inside a loop:
+        - delete candidates[_candidateList[i_scope_0]] (contracts/BuildingManagerElection.sol#218)
+BuildingManagerElection.finalizeElection() (contracts/BuildingManagerElection.sol#182-240) has costly operations inside a loop:
+        - delete voters[i_scope_1] (contracts/BuildingManagerElection.sol#229)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#costly-operations-inside-a-loop
+INFO:Detectors:
+Low level call in FractionsDAO.executeProposal(uint256) (contracts/FractionsDAO.sol#181-198):
+        - (success,data) = proposal.targetAddress.call(proposal.data) (contracts/FractionsDAO.sol#192-194)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#low-level-calls
+INFO:Slither:. analyzed (39 contracts with 77 detectors), 3 result(s) found
