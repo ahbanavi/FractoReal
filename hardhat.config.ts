@@ -44,7 +44,7 @@ const config: HardhatUserConfig = {
         showTimeSpent: true,
         enabled: process.env.REPORT_GAS ? true : false,
         coinmarketcap: vars.get("COIN_MARKET_CAP_API_KEY", ""),
-        excludeContracts: ["mocks/MinterMock.sol"],
+        excludeContracts: ["FractoRealNFTGasReporterMock", "IncreaseBalanceTestMock", "ContractCallMock"],
     },
 };
 
