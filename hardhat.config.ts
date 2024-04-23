@@ -40,7 +40,6 @@ const config: HardhatUserConfig = {
     gasReporter: {
         currency: "USD",
         token: "ETH",
-        gasPrice: 10,
         showTimeSpent: true,
         enabled: process.env.REPORT_GAS ? true : false,
         coinmarketcap: vars.get("COIN_MARKET_CAP_API_KEY", ""),
