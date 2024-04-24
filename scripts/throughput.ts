@@ -11,7 +11,7 @@ async function calculateTPS() {
     // Use hardhat test provider
     console.log("🔃 Testing with " + hre.network.name + " network...");
 
-    const [owner, otherAccount, minter, minter2, minter3, ...addrs] = await ethers.getSigners();
+    const [owner, minter, minter2, minter3] = await ethers.getSigners();
     const maxSupply = 50;
 
     // first deploy all three contracts and calculate the time taken
@@ -68,7 +68,7 @@ async function calculateTPS() {
             switch (functionName) {
                 case "phaseOneMint":
                     const tokenId = BigInt(i) + 1n;
-                    value = ethers.parseEther("0.001");
+                    value = ethers.parseEther("0.000001");
                     args = [await getSaleSignature(owner, minter, contractInstance, tokenId, value), tokenId, value];
                     break;
                 case "fractionize":
@@ -108,18 +108,24 @@ async function calculateTPS() {
     const FRF = await ethers.deployContract("FractoRealFractions", [owner.address, FRN.target]);
 
     console.log(`   📑 \x1b[35mFractoRealNFT\x1b[0m:`);
-    await FRN.setPhaseOneStartTime(await time.latest());
+    // get latest timestamp from network
+    const ts = await ethers.provider.getBlock("latest");
+    if (!ts) {
+        throw new Error("Failed to get latest block");
+    }
+
+    await FRN.setPhaseOneStartTime(ts.timestamp);
     await measureTime(minter, FRN, "phaseOneMint");
 
     // mint 40 to 50 to minter3
-    FRN.batchMint(
+    await FRN.batchMint(
         minter3.address,
         Array.from({ length: 10 }, (_, i) => BigInt(i + 40))
     );
 
     await measureTime(minter3, FRN, "transferFrom");
 
-    FRN.setErc1155Address(FRF.target);
+    await FRN.setErc1155Address(FRF.target);
     // set meterages
     const ids: bigint[] = Array.from({ length: 50 }, (_, i) => BigInt(i));
     const meterages = ids.map((id) => id + 1n);
@@ -129,7 +135,7 @@ async function calculateTPS() {
     await measureTime(minter, FRN, "fractionize");
 
     // start phase two
-    await FRN.setPhaseTwoStartTime(await time.latest());
+    await FRN.setPhaseTwoStartTime(ts.timestamp);
     await FRN.startPhaseTwoMint();
 
     console.log(`\n   📑 \x1b[35mFractoRealFractions\x1b[0m:`);

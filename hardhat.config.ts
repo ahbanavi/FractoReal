@@ -5,6 +5,7 @@ import "hardhat-gas-reporter";
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 const SEPOLIA_PRIVATE_KEY = vars.get("SEPOLIA_PRIVATE_KEY");
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
+const GANASHE_MNEMONIC = vars.get("ETHERSCAN_API_KEY", "");
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -28,7 +29,7 @@ const config: HardhatUserConfig = {
         ganache: {
             url: "http://127.0.0.1:8545",
             accounts: {
-                mnemonic: "obtain buddy debate gather sell clock fork expire flame fatigue response spell",
+                mnemonic: GANASHE_MNEMONIC,
             },
         },
     },
