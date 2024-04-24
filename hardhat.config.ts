@@ -25,6 +25,12 @@ const config: HardhatUserConfig = {
             url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
             accounts: [SEPOLIA_PRIVATE_KEY],
         },
+        ganache: {
+            url: "http://127.0.0.1:8545",
+            accounts: {
+                mnemonic: "obtain buddy debate gather sell clock fork expire flame fatigue response spell",
+            },
+        },
     },
 
     etherscan: {
