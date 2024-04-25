@@ -5,7 +5,7 @@ import "hardhat-gas-reporter";
 const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 const SEPOLIA_PRIVATE_KEY = vars.get("SEPOLIA_PRIVATE_KEY");
 const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
-const GANASHE_MNEMONIC = vars.get("ETHERSCAN_API_KEY", "");
+const GANASHE_MNEMONIC = vars.get("GANASHE_MNEMONIC", "");
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -27,7 +27,7 @@ const config: HardhatUserConfig = {
             accounts: [SEPOLIA_PRIVATE_KEY],
         },
         ganache: {
-            url: "http://127.0.0.1:8545",
+            url: "http://192.168.160.1:7545",
             accounts: {
                 mnemonic: GANASHE_MNEMONIC,
             },

@@ -1,18 +1,20 @@
 import { ethers } from "hardhat";
 import hre from "hardhat";
-import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { getSaleSignature } from "./helpers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-// Define the number of transactions to send for each functionn
-const numTransactions = 10; // Adjust this value as needed
+// Number of transactions to send for each functionn
+const numTransactions = 100;
+const maxSupply = numTransactions * 3 + 1; // a number bigger than numTransactions at least 3 times + 1
 
 async function calculateTPS() {
     // Use hardhat test provider
     console.log("🔃 Testing with " + hre.network.name + " network...");
+    //also log number of transactions and max supply
+    console.log("🔢 Number of transactions for each function: " + numTransactions);
+    console.log("ℹ️ Max supply: " + maxSupply);
 
     const [owner, minter, minter2, minter3] = await ethers.getSigners();
-    const maxSupply = 50;
 
     // first deploy all three contracts and calculate the time taken
     async function deployContractAndMeasureTime(contractName: string, contractArgs: any[]) {
@@ -21,7 +23,7 @@ async function calculateTPS() {
         let minTime = Infinity;
         let maxTime = 0;
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < numTransactions; i++) {
             let start = Date.now();
             const contractInstance = await contract.deploy(...contractArgs);
             await contractInstance.waitForDeployment();
@@ -32,7 +34,7 @@ async function calculateTPS() {
             maxTime = Math.max(maxTime, timeTaken);
         }
 
-        let averageTime = totalTime / 10;
+        let averageTime = totalTime / numTransactions;
         let TPS = (1000 / averageTime).toFixed(2);
         console.log(
             `   ⏱️ \u001b[35m${contractName}\x1b[0m: Average: \x1b[33m${averageTime}ms\x1b[0m, Minimum: \x1b[32m${minTime}ms\x1b[0m, Maximum: \x1b[31m${maxTime}ms\x1b[0m, TPS: \x1b[34m${TPS}\x1b[0m`
@@ -75,13 +77,13 @@ async function calculateTPS() {
                     args = [minter.address, BigInt(i) + 1n];
                     break;
                 case "safeTransferFrom":
-                    args = [owner.address, minter2.address, BigInt(i) + 11n, 5n, "0x"];
+                    args = [owner.address, minter2.address, BigInt(i + numTransactions * 2 + 1), 5n, "0x"];
                     break;
                 case "rebuildNFT":
                     args = [BigInt(i) + 1n];
                     break;
                 case "transferFrom":
-                    args = [minter3.address, minter2.address, BigInt(i) + 40n];
+                    args = [minter3.address, minter2.address, BigInt(i + numTransactions + 1)];
                     break;
                 default:
                     // Handle other function names here
@@ -117,17 +119,17 @@ async function calculateTPS() {
     await FRN.setPhaseOneStartTime(ts.timestamp);
     await measureTime(minter, FRN, "phaseOneMint");
 
-    // mint 40 to 50 to minter3
+    // mint 100 to 200 to minter3
     await FRN.batchMint(
         minter3.address,
-        Array.from({ length: 10 }, (_, i) => BigInt(i + 40))
+        Array.from({ length: numTransactions }, (_, i) => BigInt(i + numTransactions + 1))
     );
 
     await measureTime(minter3, FRN, "transferFrom");
 
     await FRN.setErc1155Address(FRF.target);
     // set meterages
-    const ids: bigint[] = Array.from({ length: 50 }, (_, i) => BigInt(i));
+    const ids: bigint[] = Array.from({ length: maxSupply }, (_, i) => BigInt(i));
     const meterages = ids.map((id) => id + 1n);
     await FRN.setMeterages(ids, meterages);
 
