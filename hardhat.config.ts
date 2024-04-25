@@ -27,7 +27,7 @@ const config: HardhatUserConfig = {
             accounts: [SEPOLIA_PRIVATE_KEY],
         },
         ganache: {
-            url: "http://192.168.160.1:7545",
+            url: "http://127.0.0.1:8545",
             accounts: {
                 mnemonic: GANASHE_MNEMONIC,
             },

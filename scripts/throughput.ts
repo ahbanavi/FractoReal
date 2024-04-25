@@ -92,7 +92,6 @@ async function calculateTPS() {
 
             let start = Date.now();
             const tx = await contractInstance.connect(wallet)[functionName](...args, { value: value });
-            await tx.wait();
             let end = Date.now();
             let timeTaken = end - start;
             totalTime += timeTaken;
