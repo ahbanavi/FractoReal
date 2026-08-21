@@ -1,0 +1,5 @@
+# Thesis documents: binary, never line-ending normalized or diffed as text
+*.pdf  binary
+*.pptx binary
+*.ppt  binary
+*.docx binary

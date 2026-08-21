@@ -6,6 +6,24 @@
 
 FractoReal is a blockchain-based real estate management system that leverages smart contracts to facilitate the management and fractional ownership of real estate properties. The system allows property owners to tokenize their real estate assets into NFTs (Non-Fungible Tokens) and further fractionalize them into ERC-1155 tokens. This enables multiple investors to own fractions of a property, making real estate investment more accessible and liquid. The system also provides a DAO (Decentralized Autonomous Organization) for managing the properties and making decisions collectively for shared assets, as well as rent distribution and charge management functionalities.
 
+## Thesis and Documents
+
+The full Master's thesis, the research proposal and both defense presentations are
+published in [`docs/`](./docs) for open access. The documents are in Persian; the
+English title, abstract, keywords and a BibTeX citation are in
+[`docs/README.md`](./docs/README.md).
+
+| Document | Pages | File | Slides |
+| -------- | ----: | ---- | ------ |
+| Thesis (full text) | 144 | [PDF](./docs/thesis/FractoReal-Thesis.pdf) | — |
+| Thesis defense presentation | 48 | [PDF](./docs/thesis/FractoReal-Thesis-Defense.pdf) | [Google Slides](https://docs.google.com/presentation/d/1qkpEfAiI6EWMoLN608c8roJx6iAZ085VBzXGQSveQPk/edit?usp=sharing) |
+| Research proposal | 17 | [PDF](./docs/proposal/FractoReal-Proposal.pdf) | — |
+| Proposal presentation | 23 | [PDF](./docs/proposal/FractoReal-Proposal-Defense.pdf) | [Google Slides](https://docs.google.com/presentation/d/1YsVkmkrUzj3krYApw6ugP0nG_w_4DiP7wLDdROSHQ-g/edit?usp=sharing) |
+
+The reference collection behind the literature review is available as a
+[Zotero report of ~70 blockchain and real-estate sources](https://ydst.ir/static/my-blockchain-review.html),
+plus a [supplementary collection on blockchain use cases outside real estate](https://drive.google.com/file/d/1DTpZlq4LZ10RtlGUuD4SHhJfHB4-csOQ/view?usp=sharing).
+
 ## Deployed Smart Contracts Addresses
 
 Here are the addresses and deployment transaction hashes of the deployed smart contracts on the Sepolia network:
@@ -22,6 +40,7 @@ Here are the addresses and deployment transaction hashes of the deployed smart c
 - `scripts/`: Contains the deployment and testing scripts.
 - `test/`: Contains the test cases for the smart contracts.
 - `gas-reporter/`: Contains the gas reporter results.
+- `docs/`: Contains the thesis, proposal and defense presentations.
 
 ## Installation and Testing
 
